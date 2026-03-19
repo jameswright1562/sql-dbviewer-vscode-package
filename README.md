@@ -2,6 +2,8 @@
 
 A VS Code extension for browsing SQL schemas, managing saved database connections, and running ad hoc SQL queries.
 
+[Install](https://marketplace.visualstudio.com/items?itemName=JamesWright.sql-connection-workbench)
+
 ## Features
 
 - PostgreSQL, MySQL, and SQL Server connection support
@@ -35,8 +37,8 @@ If your secret is a raw string instead of JSON, use `password` or `value` as the
 ## Development
 
 ```bash
-npm install
-npm run build
+bun install
+bun run build
 ```
 
 Launch the extension from VS Code using the `Run Extension` debug configuration.

@@ -8,6 +8,7 @@
   "engines": {
     "vscode": "^1.96.0"
   },
+  "icon": "media/package-icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/jameswright1562/sql-dbviewer-vscode-package"

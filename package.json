@@ -1,0 +1,137 @@
+{
+  "name": "sql-connection-workbench",
+  "displayName": "SQL Connection Workbench",
+  "description": "Professional SQL data exploration for VS Code with AWS Secrets Manager-backed passwords.",
+  "version": "0.1.0",
+  "publisher": "JamesWright",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "sqlConnectionWorkbench.openWorkbench",
+        "title": "SQL Workbench: Open Workbench",
+        "icon": "$(browser)"
+      },
+      {
+        "command": "sqlConnectionWorkbench.addConnection",
+        "title": "SQL Workbench: Add Connection",
+        "icon": "$(add)"
+      },
+      {
+        "command": "sqlConnectionWorkbench.refreshConnections",
+        "title": "SQL Workbench: Refresh Explorer",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "sqlConnectionWorkbench.editConnection",
+        "title": "SQL Workbench: Edit Connection"
+      },
+      {
+        "command": "sqlConnectionWorkbench.removeConnection",
+        "title": "SQL Workbench: Remove Connection"
+      },
+      {
+        "command": "sqlConnectionWorkbench.selectSchemas",
+        "title": "SQL Workbench: Select Visible Schemas"
+      },
+      {
+        "command": "sqlConnectionWorkbench.previewTable",
+        "title": "SQL Workbench: Preview Table"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "sqlConnectionWorkbench",
+          "title": "SQL Workbench",
+          "icon": "media/activity-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "sqlConnectionWorkbench": [
+        {
+          "id": "sqlConnectionWorkbench.connectionsView",
+          "name": "Connections"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "sqlConnectionWorkbench.addConnection",
+          "when": "view == sqlConnectionWorkbench.connectionsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "sqlConnectionWorkbench.openWorkbench",
+          "when": "view == sqlConnectionWorkbench.connectionsView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "sqlConnectionWorkbench.refreshConnections",
+          "when": "view == sqlConnectionWorkbench.connectionsView",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "sqlConnectionWorkbench.openWorkbench",
+          "when": "view == sqlConnectionWorkbench.connectionsView && viewItem == connection",
+          "group": "inline@1"
+        },
+        {
+          "command": "sqlConnectionWorkbench.editConnection",
+          "when": "view == sqlConnectionWorkbench.connectionsView && viewItem == connection",
+          "group": "navigation@1"
+        },
+        {
+          "command": "sqlConnectionWorkbench.selectSchemas",
+          "when": "view == sqlConnectionWorkbench.connectionsView && viewItem == connection",
+          "group": "navigation@2"
+        },
+        {
+          "command": "sqlConnectionWorkbench.removeConnection",
+          "when": "view == sqlConnectionWorkbench.connectionsView && viewItem == connection",
+          "group": "navigation@3"
+        },
+        {
+          "command": "sqlConnectionWorkbench.previewTable",
+          "when": "view == sqlConnectionWorkbench.connectionsView && viewItem == table",
+          "group": "inline@1"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "tsc --noEmit -p ./",
+    "test": "npm run build && node --test out/test/**/*.test.js",
+    "vscode:prepublish": "npm run build",
+    "package:extension": "npx @vscode/vsce package",
+    "publish:extension": "npx @vscode/vsce publish"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "latest",
+    "@aws-sdk/credential-providers": "latest",
+    "@types/mssql": "^9.1.9",
+    "mssql": "latest",
+    "mysql2": "latest",
+    "pg": "latest"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "latest",
+    "@types/node": "latest",
+    "@types/pg": "latest",
+    "@types/vscode": "^1.96.0",
+    "typescript": "latest"
+  }
+}

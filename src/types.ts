@@ -15,6 +15,7 @@ export type WorkbenchMessage =
   | { type: 'deleteConnection'; connectionId: string }
   | { type: 'testConnection'; draft: ConnectionDraft }
   | { type: 'discoverDatabases'; draft: ConnectionDraft }
+  | { type: 'runDraftQuery'; draft: ConnectionDraft; sql: string }
   | { type: 'runQuery'; connectionId: string; sql: string }
   | { type: 'chooseSchemas'; connectionId: string }
   | { type: 'newConnection' };

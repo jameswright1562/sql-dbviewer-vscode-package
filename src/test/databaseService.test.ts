@@ -2,12 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseService } from '../services/databaseService';
 import { DatabaseAdapter, ConnectionCredentials } from '../db/databaseAdapters';
-import { DiscoveredDatabase, QueryExecutionResult, SavedConnection, SchemaTable } from '../model/connection';
+import { DatabaseRole, DatabaseTypeDefinition, DiscoveredDatabase, QueryExecutionResult, SavedConnection, SchemaTable } from '../model/connection';
 
 class FakeAdapter implements DatabaseAdapter {
   public readonly engine = 'postgres' as const;
   public lastDiscoveryCredentials?: ConnectionCredentials;
   public discoveryResult: DiscoveredDatabase[] = [];
+  public roles: DatabaseRole[] = [];
+  public types: DatabaseTypeDefinition[] = [];
 
   public async testConnection(_connection: SavedConnection, _credentials: ConnectionCredentials): Promise<void> {}
 
@@ -18,6 +20,14 @@ class FakeAdapter implements DatabaseAdapter {
 
   public async getSchemas(_connection: SavedConnection, _credentials: ConnectionCredentials): Promise<string[]> {
     return [];
+  }
+
+  public async getRoles(_connection: SavedConnection, _credentials: ConnectionCredentials): Promise<DatabaseRole[]> {
+    return this.roles;
+  }
+
+  public async getTypes(_connection: SavedConnection, _credentials: ConnectionCredentials): Promise<DatabaseTypeDefinition[]> {
+    return this.types;
   }
 
   public async getTables(_connection: SavedConnection, _credentials: ConnectionCredentials, _schema: string): Promise<SchemaTable[]> {
@@ -106,4 +116,29 @@ test('discoverDatabases resolves AWS-backed credentials through the AWS provider
   assert.deepEqual(result, [{ name: 'warehouse', schemas: ['dbo'] }]);
   assert.equal(adapter.lastDiscoveryCredentials?.password, 'rotating-secret');
   assert.equal(awsRequests, 1);
+});
+
+test('getRoles and getTypes delegate to the adapter', async () => {
+  const adapter = new FakeAdapter();
+  adapter.roles = [{ name: 'app_reader', type: 'role' }];
+  adapter.types = [{ schema: 'public', name: 'status_enum' }];
+
+  const service = new DatabaseService(
+    {
+      getPassword: async () => 'stored-password'
+    } as never,
+    {
+      getPassword: async () => 'aws-password',
+      invalidate: () => undefined
+    } as never,
+    undefined,
+    [adapter]
+  );
+
+  const connection = createConnection({ database: 'analytics' });
+  const roles = await service.getRoles(connection);
+  const types = await service.getTypes(connection);
+
+  assert.deepEqual(roles, [{ name: 'app_reader', type: 'role' }]);
+  assert.deepEqual(types, [{ schema: 'public', name: 'status_enum' }]);
 });

@@ -1,6 +1,6 @@
 import { AwsSecretProvider } from './awsSecretProvider';
 import { ConnectionStore } from '../storage/connectionStore';
-import { DatabaseEngine, DiscoveredDatabase, QueryExecutionResult, SavedConnection, SchemaTable } from '../model/connection';
+import { DatabaseEngine, DatabaseRole, DatabaseTypeDefinition, DiscoveredDatabase, QueryExecutionResult, SavedConnection, SchemaTable } from '../model/connection';
 import { ConnectionCredentials, DatabaseAdapter, MySqlAdapter, PostgresAdapter, SqlServerAdapter } from '../db/databaseAdapters';
 import { ErrorReporter } from './errorReporter';
 
@@ -36,6 +36,18 @@ export class DatabaseService {
     );
   }
 
+  public async getRoles(connection: SavedConnection): Promise<DatabaseRole[]> {
+    return this.withResolvedCredentials(connection, (adapter, credentials) =>
+      adapter.getRoles(connection, credentials)
+    );
+  }
+
+  public async getTypes(connection: SavedConnection): Promise<DatabaseTypeDefinition[]> {
+    return this.withResolvedCredentials(connection, (adapter, credentials) =>
+      adapter.getTypes(connection, credentials)
+    );
+  }
+
   public async discoverDatabases(connection: SavedConnection, passwordOverride?: string): Promise<DiscoveredDatabase[]> {
     return this.withResolvedCredentials(connection, (adapter, credentials) =>
       adapter.discoverDatabases(connection, credentials)
@@ -48,10 +60,10 @@ export class DatabaseService {
     );
   }
 
-  public async executeQuery(connection: SavedConnection, sql: string): Promise<QueryExecutionResult> {
+  public async executeQuery(connection: SavedConnection, sql: string, passwordOverride?: string): Promise<QueryExecutionResult> {
     return this.withResolvedCredentials(connection, (adapter, credentials) =>
       adapter.executeQuery(connection, credentials, sql)
-    );
+    , false, passwordOverride);
   }
 
   private async withResolvedCredentials<T>(

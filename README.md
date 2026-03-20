@@ -11,6 +11,7 @@ A VS Code extension for browsing SQL schemas, managing saved database connection
 - AWS Secrets Manager password retrieval using secret id/ARN, AWS profile, and password key
 - Database discovery when the database field is left blank, including schemas visible within each accessible database
 - Schema visibility selection to keep the explorer focused
+- Explorer nodes for schemas, roles, and types
 - Query runner with tabular results inside a themed webview
 
 ## AWS Secret Format

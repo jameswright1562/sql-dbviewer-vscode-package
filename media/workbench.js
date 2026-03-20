@@ -17,12 +17,20 @@
 
   let draft = createBlankDraft();
   let draftSourceKey = 'new';
+  let queryContextKey = 'draft';
+  let queryText = 'SELECT CURRENT_TIMESTAMP;';
   let pending = false;
   const notifications = [];
 
   const persisted = vscode.getState();
   if (persisted?.draft) {
     draft = persisted.draft;
+  }
+  if (persisted?.queryText) {
+    queryText = persisted.queryText;
+  }
+  if (persisted?.queryContextKey) {
+    queryContextKey = persisted.queryContextKey;
   }
 
   window.addEventListener('message', (event) => {
@@ -96,12 +104,19 @@
   function syncDraftWithState() {
     const selected = state.connections.find((connection) => connection.id === state.selectedConnectionId);
     const nextKey = selected ? `${selected.id}:${selected.updatedAt}` : 'new';
+    const nextQueryContextKey = state.selectedConnectionId || 'draft';
 
     if (draftSourceKey !== nextKey) {
       draft = selected ? cloneConnectionToDraft(selected) : createBlankDraft();
       draftSourceKey = nextKey;
-      vscode.setState({ draft });
     }
+
+    if (queryContextKey !== nextQueryContextKey) {
+      queryContextKey = nextQueryContextKey;
+      queryText = state.currentQuery || defaultQueryForEngine(selected ? selected.engine : draft.engine);
+    }
+
+    persistState();
   }
 
   function setPending(value) {
@@ -321,13 +336,13 @@
             <div class="section-header">
               <div>
                 <h3 class="section-title">SQL Query</h3>
-                <div class="subtle">Use Ctrl/Cmd + Enter to run the current statement against the selected saved connection.</div>
+                <div class="subtle">Use Ctrl/Cmd + Enter to run the current statement against the selected saved connection or the connection draft you are editing.</div>
               </div>
               <div class="query-actions">
-                <button class="primary" data-action="runQuery" ${!selected || pending ? 'disabled' : ''}>Run Query</button>
+                <button class="primary" data-action="runQuery" ${pending ? 'disabled' : ''}>Run Query</button>
               </div>
             </div>
-            <textarea id="query" spellcheck="false" placeholder="Save a connection to start querying.">${escapeHtml(state.currentQuery || '')}</textarea>
+            <textarea id="query" spellcheck="false" placeholder="Write a SQL statement to test the connection or query saved data.">${escapeHtml(queryText || '')}</textarea>
           </section>
           <section class="result-wrap">
             ${renderResult(result)}
@@ -350,18 +365,18 @@
       });
     }
 
-    bindValue('name', (value) => { draft.name = value; persistDraft(); });
-    bindValue('host', (value) => { draft.host = value; persistDraft(); });
-    bindValue('database', (value) => { draft.database = value; persistDraft(); });
-    bindValue('username', (value) => { draft.username = value; persistDraft(); });
-    bindValue('port', (value) => { draft.port = Number(value); persistDraft(); });
-    bindValue('sslMode', (value) => { draft.sslMode = value; persistDraft(); });
+    bindValue('name', (value) => { draft.name = value; persistState(); });
+    bindValue('host', (value) => { draft.host = value; persistState(); });
+    bindValue('database', (value) => { draft.database = value; persistState(); });
+    bindValue('username', (value) => { draft.username = value; persistState(); });
+    bindValue('port', (value) => { draft.port = Number(value); persistState(); });
+    bindValue('sslMode', (value) => { draft.sslMode = value; persistState(); });
     bindValue('authMode', (value) => {
       draft.authMode = value;
       if (value === 'awsSecret' && !draft.awsSecret) {
         draft.awsSecret = { secretId: '', profile: '', passwordKey: 'password', region: '' };
       }
-      persistDraft();
+      persistState();
       render();
     });
     bindValue('engine', (value) => {
@@ -371,17 +386,24 @@
       if (!previousPort || previousPort === previousDefaultPort) {
         draft.port = defaultPorts[value];
       }
-      persistDraft();
+      if (queryContextKey === 'draft' && !queryText.trim()) {
+        queryText = defaultQueryForEngine(draft.engine);
+      }
+      persistState();
       render();
     });
-    bindValue('password', (value) => { draft.password = value; persistDraft(); });
-    bindValue('secretId', (value) => { draft.awsSecret.secretId = value; persistDraft(); });
-    bindValue('profile', (value) => { draft.awsSecret.profile = value; persistDraft(); });
-    bindValue('passwordKey', (value) => { draft.awsSecret.passwordKey = value; persistDraft(); });
-    bindValue('region', (value) => { draft.awsSecret.region = value; persistDraft(); });
+    bindValue('password', (value) => { draft.password = value; persistState(); });
+    bindValue('secretId', (value) => { draft.awsSecret.secretId = value; persistState(); });
+    bindValue('profile', (value) => { draft.awsSecret.profile = value; persistState(); });
+    bindValue('passwordKey', (value) => { draft.awsSecret.passwordKey = value; persistState(); });
+    bindValue('region', (value) => { draft.awsSecret.region = value; persistState(); });
 
     const query = document.getElementById('query');
     if (query) {
+      query.addEventListener('input', () => {
+        queryText = query.value;
+        persistState();
+      });
       query.addEventListener('keydown', (event) => {
         if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
           event.preventDefault();
@@ -393,7 +415,9 @@
     bindAction('newConnection', () => {
       draft = createBlankDraft();
       draftSourceKey = 'new';
-      persistDraft();
+      queryContextKey = 'draft';
+      queryText = defaultQueryForEngine(draft.engine);
+      persistState();
       send({ type: 'newConnection' });
     });
 
@@ -441,29 +465,35 @@
 
         draft.database = database.name;
         draft.visibleSchemas = [...database.schemas];
-        persistDraft();
+        persistState();
         render();
       });
     }
   }
 
   function runQuery() {
-    if (!state.selectedConnectionId) {
-      pushNotification('error', 'Save and select a connection before running a query.');
-      render();
+    const query = document.getElementById('query');
+    queryText = query ? query.value : '';
+    persistState();
+
+    if (state.selectedConnectionId) {
+      send({
+        type: 'runQuery',
+        connectionId: state.selectedConnectionId,
+        sql: queryText
+      });
       return;
     }
 
-    const query = document.getElementById('query');
     send({
-      type: 'runQuery',
-      connectionId: state.selectedConnectionId,
-      sql: query ? query.value : ''
+      type: 'runDraftQuery',
+      draft,
+      sql: queryText
     });
   }
 
-  function persistDraft() {
-    vscode.setState({ draft });
+  function persistState() {
+    vscode.setState({ draft, queryText, queryContextKey });
   }
 
   function bindValue(id, onChange) {
@@ -514,6 +544,18 @@
       mysql: 'MySQL',
       sqlserver: 'SQL Server'
     }[engine] || engine;
+  }
+
+  function defaultQueryForEngine(engine) {
+    if (engine === 'mysql') {
+      return 'SELECT NOW() AS current_timestamp;';
+    }
+
+    if (engine === 'sqlserver') {
+      return 'SELECT SYSDATETIME() AS current_timestamp;';
+    }
+
+    return 'SELECT CURRENT_TIMESTAMP;';
   }
 
   function renderResult(result) {
@@ -572,6 +614,6 @@
   }
 
   render();
-  vscode.setState({ draft });
+  persistState();
   vscode.postMessage({ type: 'ready' });
 })();

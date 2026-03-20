@@ -21,6 +21,8 @@ export class WorkbenchPanel implements vscode.Disposable {
   private selectedConnectionId?: string;
   private isCreatingNewConnection = false;
   private discoveredDatabases: DiscoveredDatabase[] = [];
+  private draftQuery = 'SELECT CURRENT_TIMESTAMP;';
+  private draftResult?: QueryExecutionResult;
   private readonly queryByConnectionId = new Map<string, string>();
   private readonly resultByConnectionId = new Map<string, QueryExecutionResult>();
   private readonly disposables: vscode.Disposable[] = [];
@@ -74,6 +76,7 @@ export class WorkbenchPanel implements vscode.Disposable {
     this.isCreatingNewConnection = true;
     this.selectedConnectionId = undefined;
     this.clearDiscovery();
+    this.clearDraftExecution();
     await this.connectionStore.setLastSelectedConnectionId(undefined);
     await this.show();
   }
@@ -82,6 +85,7 @@ export class WorkbenchPanel implements vscode.Disposable {
     this.isCreatingNewConnection = false;
     this.selectedConnectionId = connectionId;
     this.clearDiscovery();
+    this.clearDraftExecution();
     await this.connectionStore.setLastSelectedConnectionId(connectionId);
     await this.show(connectionId);
   }
@@ -90,6 +94,7 @@ export class WorkbenchPanel implements vscode.Disposable {
     this.isCreatingNewConnection = false;
     this.selectedConnectionId = node.connection.id;
     this.clearDiscovery();
+    this.clearDraftExecution();
     this.queryByConnectionId.set(
       node.connection.id,
       this.treeProvider.buildPreviewQuery(node.connection, node.schema, node.table)
@@ -180,6 +185,7 @@ export class WorkbenchPanel implements vscode.Disposable {
           this.selectedConnectionId = message.connectionId;
           if (message.connectionId) {
             this.clearDiscovery();
+            this.clearDraftExecution();
           }
           await this.connectionStore.setLastSelectedConnectionId(message.connectionId);
           await this.postState();
@@ -188,6 +194,7 @@ export class WorkbenchPanel implements vscode.Disposable {
           this.isCreatingNewConnection = true;
           this.selectedConnectionId = undefined;
           this.clearDiscovery();
+          this.clearDraftExecution();
           await this.connectionStore.setLastSelectedConnectionId(undefined);
           await this.postState();
           break;
@@ -203,6 +210,7 @@ export class WorkbenchPanel implements vscode.Disposable {
           const saved = await this.connectionStore.saveConnection(draft);
           this.isCreatingNewConnection = false;
           this.selectedConnectionId = saved.id;
+          this.clearDraftExecution();
           this.ensureQuery(saved);
           await this.postState();
           await this.notify('info', `Saved ${saved.name}.`);
@@ -213,6 +221,7 @@ export class WorkbenchPanel implements vscode.Disposable {
           this.queryByConnectionId.delete(message.connectionId);
           this.resultByConnectionId.delete(message.connectionId);
           this.clearDiscovery();
+          this.clearDraftExecution();
           await this.handleConnectionsChanged();
           await this.notify('info', 'Connection removed.');
           break;
@@ -246,6 +255,25 @@ export class WorkbenchPanel implements vscode.Disposable {
           this.queryByConnectionId.set(connection.id, message.sql);
           const result = await this.databaseService.executeQuery(connection, sql);
           this.resultByConnectionId.set(connection.id, result);
+          await this.postState();
+          break;
+        }
+        case 'runDraftQuery': {
+          const draft = this.normalizeDraft(message.draft);
+          const sql = message.sql.trim();
+          if (!sql) {
+            throw new Error('Enter a SQL query before running it.');
+          }
+
+          this.draftQuery = message.sql;
+          if (!draft.database.trim()) {
+            await this.discoverDatabasesForDraft(draft);
+            await this.postState();
+            break;
+          }
+
+          const connection = this.materializeDraft(draft);
+          this.draftResult = await this.databaseService.executeQuery(connection, sql, draft.password);
           await this.postState();
           break;
         }
@@ -358,6 +386,10 @@ export class WorkbenchPanel implements vscode.Disposable {
     this.discoveredDatabases = [];
   }
 
+  private clearDraftExecution(): void {
+    this.draftResult = undefined;
+  }
+
   private requireConnection(connectionId: string): SavedConnection {
     const connection = this.connectionStore.getConnection(connectionId);
     if (!connection) {
@@ -410,8 +442,8 @@ export class WorkbenchPanel implements vscode.Disposable {
     const state: WorkbenchState = {
       connections: webviewConnections,
       selectedConnectionId: selectedId,
-      currentQuery: selectedId ? this.queryByConnectionId.get(selectedId) ?? '' : '',
-      lastResult: selectedId ? this.resultByConnectionId.get(selectedId) : undefined,
+      currentQuery: selectedId ? this.queryByConnectionId.get(selectedId) ?? '' : this.draftQuery,
+      lastResult: selectedId ? this.resultByConnectionId.get(selectedId) : this.draftResult,
       discoveredDatabases: this.discoveredDatabases
     };
 

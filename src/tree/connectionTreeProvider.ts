@@ -51,9 +51,27 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<TreeNode>
 
     if (element.kind === 'database') {
       const item = new vscode.TreeItem(element.database, vscode.TreeItemCollapsibleState.Collapsed);
-      item.description = `${element.connection.visibleSchemas.length} schema(s)`;
+      item.description = 'schemas, roles, types';
       item.contextValue = 'database';
       item.iconPath = new vscode.ThemeIcon('folder-library');
+      return item;
+    }
+
+    if (element.kind === 'category') {
+      const labels: Record<typeof element.category, string> = {
+        schemas: 'Schemas',
+        roles: 'Roles',
+        types: 'Types'
+      };
+      const icons: Record<typeof element.category, string> = {
+        schemas: 'symbol-namespace',
+        roles: 'account',
+        types: 'symbol-class'
+      };
+
+      const item = new vscode.TreeItem(labels[element.category], vscode.TreeItemCollapsibleState.Collapsed);
+      item.contextValue = `category.${element.category}`;
+      item.iconPath = new vscode.ThemeIcon(icons[element.category]);
       return item;
     }
 
@@ -62,6 +80,22 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<TreeNode>
       item.description = element.database;
       item.contextValue = 'schema';
       item.iconPath = new vscode.ThemeIcon('symbol-namespace');
+      return item;
+    }
+
+    if (element.kind === 'role') {
+      const item = new vscode.TreeItem(element.role.name, vscode.TreeItemCollapsibleState.None);
+      item.description = element.role.type;
+      item.contextValue = 'role';
+      item.iconPath = new vscode.ThemeIcon('account');
+      return item;
+    }
+
+    if (element.kind === 'type') {
+      const item = new vscode.TreeItem(element.typeDefinition.name, vscode.TreeItemCollapsibleState.None);
+      item.description = element.typeDefinition.schema;
+      item.contextValue = 'type';
+      item.iconPath = new vscode.ThemeIcon('symbol-class');
       return item;
     }
 
@@ -95,34 +129,107 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<TreeNode>
       }));
     }
 
-    if (element.kind === 'placeholder' || element.kind === 'table') {
+    if (element.kind === 'placeholder' || element.kind === 'table' || element.kind === 'role' || element.kind === 'type') {
       return [];
     }
 
     if (element.kind === 'connection') {
-      const connection = element.connection;
-      if (!connection.visibleSchemas.length) {
-        return [{
-          kind: 'placeholder',
-          label: 'No schemas selected',
-          description: 'Use "Select Visible Schemas" to populate the explorer.'
-        }];
-      }
-
       return [{
         kind: 'database' as const,
-        connection,
-        database: connection.database
+        connection: element.connection,
+        database: element.connection.database
       }];
     }
 
     if (element.kind === 'database') {
-      return element.connection.visibleSchemas.map((schema) => ({
-        kind: 'schema' as const,
-        connection: element.connection,
-        database: element.database,
-        schema
-      }));
+      return [
+        {
+          kind: 'category' as const,
+          connection: element.connection,
+          database: element.database,
+          category: 'schemas'
+        },
+        {
+          kind: 'category' as const,
+          connection: element.connection,
+          database: element.database,
+          category: 'roles'
+        },
+        {
+          kind: 'category' as const,
+          connection: element.connection,
+          database: element.database,
+          category: 'types'
+        }
+      ];
+    }
+
+    if (element.kind === 'category') {
+      if (element.category === 'schemas') {
+        if (!element.connection.visibleSchemas.length) {
+          return [{
+            kind: 'placeholder',
+            label: 'No schemas selected',
+            description: 'Use "Select Visible Schemas" to populate the explorer.'
+          }];
+        }
+
+        return element.connection.visibleSchemas.map((schema) => ({
+          kind: 'schema' as const,
+          connection: element.connection,
+          database: element.database,
+          schema
+        }));
+      }
+
+      try {
+        if (element.category === 'roles') {
+          const roles = await this.databaseService.getRoles(element.connection);
+          if (!roles.length) {
+            return [{
+              kind: 'placeholder',
+              label: 'No roles found'
+            }];
+          }
+
+          return roles.map((role) => ({
+            kind: 'role' as const,
+            connection: element.connection,
+            database: element.database,
+            role
+          }));
+        }
+
+        const types = await this.databaseService.getTypes(element.connection);
+        if (!types.length) {
+          return [{
+            kind: 'placeholder',
+            label: 'No types found'
+          }];
+        }
+
+        return types.map((typeDefinition) => ({
+          kind: 'type' as const,
+          connection: element.connection,
+          database: element.database,
+          typeDefinition
+        }));
+      } catch (error) {
+        this.errorReporter?.error(error, {
+          operation: 'tree.getChildren',
+          details: {
+            connectionId: element.connection.id,
+            connectionName: element.connection.name,
+            category: element.category
+          }
+        });
+        const message = error instanceof Error ? error.message : 'Unable to load database objects.';
+        return [{
+          kind: 'placeholder',
+          label: `Failed to load ${element.category}`,
+          description: message
+        }];
+      }
     }
 
     try {
@@ -173,7 +280,7 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<TreeNode>
       };
     }
 
-    if (element.kind === 'schema') {
+    if (element.kind === 'category') {
       const connection = this.connectionStore.getConnection(element.connection.id);
       if (!connection) {
         return undefined;
@@ -183,6 +290,20 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<TreeNode>
         kind: 'database',
         connection,
         database: element.database
+      };
+    }
+
+    if (element.kind === 'schema') {
+      const connection = this.connectionStore.getConnection(element.connection.id);
+      if (!connection) {
+        return undefined;
+      }
+
+      return {
+        kind: 'category',
+        connection,
+        database: element.database,
+        category: 'schemas'
       };
     }
 
@@ -197,6 +318,20 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<TreeNode>
         connection,
         database: element.database,
         schema: element.schema
+      };
+    }
+
+    if (element.kind === 'role' || element.kind === 'type') {
+      const connection = this.connectionStore.getConnection(element.connection.id);
+      if (!connection) {
+        return undefined;
+      }
+
+      return {
+        kind: 'category',
+        connection,
+        database: element.database,
+        category: element.kind === 'role' ? 'roles' : 'types'
       };
     }
 

@@ -24,7 +24,7 @@ jobs:
           package-manager-cache: false
 
       - name: Install dependencies
-        run: npm install
+        run: npm install && cd web && npm install
 
       - name: Run tests
         run: npm test

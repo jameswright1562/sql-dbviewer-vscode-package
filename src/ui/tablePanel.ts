@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { buildPreviewTableSql } from '../db/databaseAdapters';
-import { ExplorerTableNode } from '../model/connection';
+import { buildFilteredTableSql, buildPreviewTableSql } from '../db/databaseAdapters';
+import { ExplorerTableNode, TableFilterDefinition } from '../model/connection';
 import { DatabaseService } from '../services/databaseService';
 import { ErrorReporter } from '../services/errorReporter';
 import { ConnectionStore } from '../storage/connectionStore';
@@ -12,6 +12,8 @@ export class TablePanel implements vscode.Disposable {
   private panel?: vscode.WebviewPanel;
   private currentNode?: ExplorerTableNode;
   private currentState?: TableViewState;
+  private currentSql?: string;
+  private currentFilters: TableFilterDefinition[] = [];
   private readonly disposables: vscode.Disposable[] = [];
 
   public constructor(
@@ -22,7 +24,17 @@ export class TablePanel implements vscode.Disposable {
   ) {}
 
   public async show(node: ExplorerTableNode): Promise<void> {
+    const hasChangedTable = this.currentNode?.connection.id !== node.connection.id
+      || this.currentNode?.schema !== node.schema
+      || this.currentNode?.table !== node.table;
     this.currentNode = node;
+    if (hasChangedTable) {
+      this.currentFilters = [];
+      this.currentSql = buildPreviewTableSql(node.connection.engine, {
+        schema: node.schema,
+        table: node.table
+      });
+    }
     const panel = this.ensurePanel();
     panel.title = `${node.schema}.${node.table}`;
     panel.reveal(vscode.ViewColumn.Two);
@@ -94,6 +106,15 @@ export class TablePanel implements vscode.Disposable {
         case 'refresh':
           await this.refresh();
           break;
+        case 'runQuery':
+          await this.runCustomQuery(message.sql);
+          break;
+        case 'applyFilters':
+          await this.applyFilters(message.filters);
+          break;
+        case 'resetSql':
+          await this.resetSql();
+          break;
         case 'openWorkbench':
           await vscode.commands.executeCommand('sqlConnectionWorkbench.openWorkbench', message.connectionId);
           break;
@@ -119,9 +140,15 @@ export class TablePanel implements vscode.Disposable {
 
     const { connection, schema, table } = this.currentNode;
     const previewSql = buildPreviewTableSql(connection.engine, { schema, table });
+    const currentSql = this.currentSql ?? previewSql;
 
     try {
-      const result = await this.databaseService.previewTable(connection, { schema, table });
+      const [columns, result] = await Promise.all([
+        this.databaseService.getColumns(connection, { schema, table }),
+        this.databaseService.executeQuery(connection, currentSql)
+      ]);
+
+      this.currentSql = currentSql;
       this.currentState = {
         connectionId: connection.id,
         connectionName: connection.name,
@@ -130,6 +157,9 @@ export class TablePanel implements vscode.Disposable {
         schema,
         table,
         previewSql,
+        currentSql,
+        columns,
+        filters: [...this.currentFilters],
         result
       };
     } catch (error) {
@@ -151,11 +181,54 @@ export class TablePanel implements vscode.Disposable {
         schema,
         table,
         previewSql,
+        currentSql,
+        columns: this.currentState?.columns ?? [],
+        filters: [...this.currentFilters],
         errorMessage: normalized.message
       };
     }
 
     await this.postState();
+  }
+
+  private async runCustomQuery(sql: string): Promise<void> {
+    const trimmedSql = sql.trim();
+    if (!trimmedSql) {
+      throw new Error('Enter a SQL query before running it.');
+    }
+
+    this.currentSql = sql;
+    await this.refresh();
+  }
+
+  private async applyFilters(filters: TableFilterDefinition[]): Promise<void> {
+    if (!this.currentNode) {
+      return;
+    }
+
+    this.currentFilters = filters;
+    this.currentSql = buildFilteredTableSql(
+      this.currentNode.connection.engine,
+      {
+        schema: this.currentNode.schema,
+        table: this.currentNode.table
+      },
+      filters
+    );
+    await this.refresh();
+  }
+
+  private async resetSql(): Promise<void> {
+    if (!this.currentNode) {
+      return;
+    }
+
+    this.currentFilters = [];
+    this.currentSql = buildPreviewTableSql(this.currentNode.connection.engine, {
+      schema: this.currentNode.schema,
+      table: this.currentNode.table
+    });
+    await this.refresh();
   }
 
   private async postState(): Promise<void> {

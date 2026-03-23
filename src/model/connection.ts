@@ -60,6 +60,25 @@ export interface DatabaseColumn {
   isNullable: boolean;
 }
 
+export type TableFilterOperator =
+  | 'equals'
+  | 'notEquals'
+  | 'contains'
+  | 'startsWith'
+  | 'endsWith'
+  | 'greaterThan'
+  | 'greaterThanOrEqual'
+  | 'lessThan'
+  | 'lessThanOrEqual'
+  | 'isNull'
+  | 'isNotNull';
+
+export interface TableFilterDefinition {
+  columnName: string;
+  operator: TableFilterOperator;
+  value?: string;
+}
+
 export interface DatabaseRole {
   name: string;
   type?: string;

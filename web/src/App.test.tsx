@@ -84,7 +84,7 @@ describe('table preview view', () => {
   });
 
   test('renders preview SQL and rows after receiving table state', async () => {
-    installMockVsCodeApi();
+    const api = installMockVsCodeApi();
     render(<App />);
 
     dispatchIncomingMessage({
@@ -97,6 +97,9 @@ describe('table preview view', () => {
         schema: 'public',
         table: 'orders',
         previewSql: 'SELECT * FROM "public"."orders" LIMIT 100;',
+        currentSql: 'SELECT * FROM "public"."orders" LIMIT 100;',
+        columns: [{ name: 'order_id', dataType: 'integer', isNullable: false }],
+        filters: [],
         result: {
           columns: [{ name: 'order_id' }],
           rows: [{ order_id: 42 }],
@@ -108,7 +111,16 @@ describe('table preview view', () => {
     });
 
     expect(await screen.findByText('public.orders')).toBeInTheDocument();
-    expect(screen.getByText('SELECT * FROM "public"."orders" LIMIT 100;')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('SELECT * FROM "public"."orders" LIMIT 100;')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
+
+    await userEvent.clear(screen.getByLabelText('Table SQL'));
+    await userEvent.type(screen.getByLabelText('Table SQL'), 'select order_id from public.orders limit 10;');
+    await userEvent.click(screen.getByRole('button', { name: 'Run Query' }));
+
+    expect(api.postMessage).toHaveBeenLastCalledWith({
+      type: 'runQuery',
+      sql: 'select order_id from public.orders limit 10;'
+    });
   });
 });

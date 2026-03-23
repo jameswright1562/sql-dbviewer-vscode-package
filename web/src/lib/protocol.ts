@@ -38,6 +38,31 @@ export interface QueryExecutionResult {
   message: string;
 }
 
+export type TableFilterOperator =
+  | 'equals'
+  | 'notEquals'
+  | 'contains'
+  | 'startsWith'
+  | 'endsWith'
+  | 'greaterThan'
+  | 'greaterThanOrEqual'
+  | 'lessThan'
+  | 'lessThanOrEqual'
+  | 'isNull'
+  | 'isNotNull';
+
+export interface DatabaseColumn {
+  name: string;
+  dataType: string;
+  isNullable: boolean;
+}
+
+export interface TableFilterDefinition {
+  columnName: string;
+  operator: TableFilterOperator;
+  value?: string;
+}
+
 export interface DiscoveredDatabase {
   name: string;
   schemas: string[];
@@ -64,6 +89,9 @@ export interface TableViewState {
   schema: string;
   table: string;
   previewSql: string;
+  currentSql: string;
+  columns: DatabaseColumn[];
+  filters: TableFilterDefinition[];
   result?: QueryExecutionResult;
   errorMessage?: string;
 }
@@ -101,6 +129,9 @@ export type SidebarOutgoingMessage =
 export type TableOutgoingMessage =
   | { type: 'ready' }
   | { type: 'refresh' }
+  | { type: 'runQuery'; sql: string }
+  | { type: 'applyFilters'; filters: TableFilterDefinition[] }
+  | { type: 'resetSql' }
   | { type: 'openWorkbench'; connectionId: string };
 
 export type WebviewKind = 'workbench' | 'sidebar' | 'table';

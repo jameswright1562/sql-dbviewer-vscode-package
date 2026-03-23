@@ -1,8 +1,10 @@
 import {
   ConnectionDraft,
+  DatabaseColumn,
   DatabaseEngine,
   DiscoveredDatabase,
   QueryExecutionResult,
+  TableFilterDefinition,
   WebviewConnection
 } from './model/connection';
 
@@ -27,6 +29,9 @@ export interface TableViewState {
   schema: string;
   table: string;
   previewSql: string;
+  currentSql: string;
+  columns: DatabaseColumn[];
+  filters: TableFilterDefinition[];
   result?: QueryExecutionResult;
   errorMessage?: string;
 }
@@ -52,6 +57,9 @@ export type SidebarMessage =
 export type TableViewMessage =
   | { type: 'ready' }
   | { type: 'refresh' }
+  | { type: 'runQuery'; sql: string }
+  | { type: 'applyFilters'; filters: TableFilterDefinition[] }
+  | { type: 'resetSql' }
   | { type: 'openWorkbench'; connectionId: string };
 
 export type ExtensionToWebviewMessage =

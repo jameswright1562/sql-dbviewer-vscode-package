@@ -65,6 +65,10 @@
         {
           "id": "sqlConnectionWorkbench.connectionsView",
           "name": "Connections"
+        },
+        {
+          "id": "sqlConnectionWorkbench.workspaceSidebar",
+          "name": "SQL Workbench"
         }
       ]
     },
@@ -116,10 +120,13 @@
     }
   },
   "scripts": {
-    "build": "tsc -p ./",
+    "build:web": "npm --prefix web run build",
+    "lint:web": "npm --prefix web run typecheck",
+    "test:web": "npm --prefix web test -- --watchAll=false",
+    "build": "npm run build:web && tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "lint": "tsc --noEmit -p ./",
-    "test": "npm run build && node --test out/test/**/*.test.js",
+    "lint": "npm run lint:web && tsc --noEmit -p ./",
+    "test": "npm run build && node --test out/test/**/*.test.js && npm run test:web",
     "vscode:prepublish": "npm run build",
     "package:extension": "npx @vscode/vsce package",
     "publish:extension": "npx @vscode/vsce publish"
@@ -128,6 +135,7 @@
     "@aws-sdk/client-secrets-manager": "latest",
     "@aws-sdk/credential-providers": "latest",
     "@types/mssql": "^9.1.9",
+    "kysely": "^0.28.14",
     "mssql": "latest",
     "mysql2": "latest",
     "pg": "latest"

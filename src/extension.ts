@@ -4,6 +4,8 @@ import { DatabaseService } from './services/databaseService';
 import { ConnectionStore } from './storage/connectionStore';
 import { ConnectionTreeProvider } from './tree/connectionTreeProvider';
 import { WorkbenchPanel } from './ui/workbenchPanel';
+import { WorkbenchSidebarViewProvider } from './ui/workbenchSidebarViewProvider';
+import { TablePanel } from './ui/tablePanel';
 import { ExplorerConnectionNode, ExplorerTableNode } from './model/connection';
 import { ErrorReporter } from './services/errorReporter';
 
@@ -14,6 +16,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const databaseService = new DatabaseService(connectionStore, awsSecretProvider, errorReporter);
   const treeProvider = new ConnectionTreeProvider(connectionStore, databaseService, errorReporter);
   const workbenchPanel = new WorkbenchPanel(context, connectionStore, databaseService, treeProvider, errorReporter);
+  const workbenchSidebar = new WorkbenchSidebarViewProvider(context, connectionStore, errorReporter);
+  const tablePanel = new TablePanel(context, connectionStore, databaseService, errorReporter);
 
   errorReporter.info('Extension activated.', {
     extensionMode: vscode.ExtensionMode[context.extensionMode]
@@ -24,6 +28,11 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.createTreeView('sqlConnectionWorkbench.connectionsView', {
       treeDataProvider: treeProvider,
       showCollapseAll: true
+    }),
+    vscode.window.registerWebviewViewProvider(WorkbenchSidebarViewProvider.viewType, workbenchSidebar, {
+      webviewOptions: {
+        retainContextWhenHidden: true
+      }
     }),
     registerCommand(context, errorReporter, 'sqlConnectionWorkbench.openWorkbench', async (target?: ExplorerConnectionNode | ExplorerTableNode) => {
       await workbenchPanel.show(target);
@@ -66,10 +75,13 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
-      await workbenchPanel.previewTable(target);
+      await tablePanel.show(target);
     }),
     {
-      dispose: () => workbenchPanel.dispose()
+      dispose: () => {
+        workbenchPanel.dispose();
+        tablePanel.dispose();
+      }
     }
   );
 
@@ -78,6 +90,12 @@ export function activate(context: vscode.ExtensionContext): void {
     void workbenchPanel.handleConnectionsChanged().catch((error) => {
       const normalized = errorReporter.error(error, {
         operation: 'extension.onDidChangeConnectionStore'
+      });
+      void vscode.window.showErrorMessage(normalized.message);
+    });
+    void tablePanel.handleConnectionsChanged().catch((error) => {
+      const normalized = errorReporter.error(error, {
+        operation: 'extension.onDidChangeTablePanel'
       });
       void vscode.window.showErrorMessage(normalized.message);
     });

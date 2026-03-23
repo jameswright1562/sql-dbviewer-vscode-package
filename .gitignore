@@ -4,3 +4,6 @@ out/
 *.vsix
 .idea/
 .vscode/
+build/
+dist/
+.parcel-cache/

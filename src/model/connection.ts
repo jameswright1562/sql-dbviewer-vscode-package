@@ -54,6 +54,12 @@ export interface SchemaTable {
   type: string;
 }
 
+export interface DatabaseColumn {
+  name: string;
+  dataType: string;
+  isNullable: boolean;
+}
+
 export interface DatabaseRole {
   name: string;
   type?: string;
@@ -98,6 +104,15 @@ export interface ExplorerTableNode {
   tableType: string;
 }
 
+export interface ExplorerColumnNode {
+  kind: 'column';
+  connection: SavedConnection;
+  database: string;
+  schema: string;
+  table: string;
+  column: DatabaseColumn;
+}
+
 export interface ExplorerRoleNode {
   kind: 'role';
   connection: SavedConnection;
@@ -118,6 +133,7 @@ export type ExplorerNode =
   | ExplorerCategoryNode
   | ExplorerSchemaNode
   | ExplorerTableNode
+  | ExplorerColumnNode
   | ExplorerRoleNode
   | ExplorerTypeNode;
 

@@ -1,4 +1,10 @@
-import { ConnectionDraft, DiscoveredDatabase, QueryExecutionResult, WebviewConnection } from './model/connection';
+import {
+  ConnectionDraft,
+  DatabaseEngine,
+  DiscoveredDatabase,
+  QueryExecutionResult,
+  WebviewConnection
+} from './model/connection';
 
 export interface WorkbenchState {
   connections: WebviewConnection[];
@@ -6,6 +12,23 @@ export interface WorkbenchState {
   currentQuery: string;
   lastResult?: QueryExecutionResult;
   discoveredDatabases: DiscoveredDatabase[];
+}
+
+export interface SidebarState {
+  connections: WebviewConnection[];
+  selectedConnectionId?: string;
+}
+
+export interface TableViewState {
+  connectionId: string;
+  connectionName: string;
+  engine: DatabaseEngine;
+  database: string;
+  schema: string;
+  table: string;
+  previewSql: string;
+  result?: QueryExecutionResult;
+  errorMessage?: string;
 }
 
 export type WorkbenchMessage =
@@ -20,6 +43,19 @@ export type WorkbenchMessage =
   | { type: 'chooseSchemas'; connectionId: string }
   | { type: 'newConnection' };
 
+export type SidebarMessage =
+  | { type: 'ready' }
+  | { type: 'addConnection' }
+  | { type: 'refresh' }
+  | { type: 'openWorkbench'; connectionId?: string };
+
+export type TableViewMessage =
+  | { type: 'ready' }
+  | { type: 'refresh' }
+  | { type: 'openWorkbench'; connectionId: string };
+
 export type ExtensionToWebviewMessage =
-  | { type: 'state'; state: WorkbenchState }
+  | { type: 'workbenchState'; state: WorkbenchState }
+  | { type: 'sidebarState'; state: SidebarState }
+  | { type: 'tableState'; state: TableViewState }
   | { type: 'notification'; level: 'info' | 'error'; message: string };

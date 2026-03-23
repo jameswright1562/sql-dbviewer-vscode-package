@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { DatabaseService } from '../services/databaseService';
-import { SavedConnection, ExplorerNode } from '../model/connection';
+import { ExplorerNode } from '../model/connection';
 import { ConnectionStore } from '../storage/connectionStore';
 import { ErrorReporter } from '../services/errorReporter';
 
@@ -83,6 +83,15 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<TreeNode>
       return item;
     }
 
+    if (element.kind === 'column') {
+      const item = new vscode.TreeItem(element.column.name, vscode.TreeItemCollapsibleState.None);
+      item.description = `${element.column.dataType}${element.column.isNullable ? ' · nullable' : ''}`;
+      item.tooltip = `${element.schema}.${element.table}.${element.column.name} (${element.column.dataType})`;
+      item.contextValue = 'column';
+      item.iconPath = new vscode.ThemeIcon('symbol-field');
+      return item;
+    }
+
     if (element.kind === 'role') {
       const item = new vscode.TreeItem(element.role.name, vscode.TreeItemCollapsibleState.None);
       item.description = element.role.type;
@@ -99,16 +108,11 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<TreeNode>
       return item;
     }
 
-    const item = new vscode.TreeItem(element.table, vscode.TreeItemCollapsibleState.None);
+    const item = new vscode.TreeItem(element.table, vscode.TreeItemCollapsibleState.Collapsed);
     item.description = element.tableType.toLowerCase();
     item.tooltip = `${element.database}.${element.schema}.${element.table}`;
     item.contextValue = 'table';
     item.iconPath = new vscode.ThemeIcon('table');
-    item.command = {
-      command: 'sqlConnectionWorkbench.previewTable',
-      title: 'Preview Table',
-      arguments: [element]
-    };
     return item;
   }
 
@@ -129,7 +133,7 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<TreeNode>
       }));
     }
 
-    if (element.kind === 'placeholder' || element.kind === 'table' || element.kind === 'role' || element.kind === 'type') {
+    if (element.kind === 'placeholder' || element.kind === 'column' || element.kind === 'role' || element.kind === 'type') {
       return [];
     }
 
@@ -232,6 +236,47 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<TreeNode>
       }
     }
 
+    if (element.kind === 'table') {
+      try {
+        const columns = await this.databaseService.getColumns(element.connection, {
+          schema: element.schema,
+          table: element.table
+        });
+
+        if (!columns.length) {
+          return [{
+            kind: 'placeholder',
+            label: 'No columns found'
+          }];
+        }
+
+        return columns.map((column) => ({
+          kind: 'column' as const,
+          connection: element.connection,
+          database: element.database,
+          schema: element.schema,
+          table: element.table,
+          column
+        }));
+      } catch (error) {
+        this.errorReporter?.error(error, {
+          operation: 'tree.getChildren',
+          details: {
+            connectionId: element.connection.id,
+            connectionName: element.connection.name,
+            schema: element.schema,
+            table: element.table
+          }
+        });
+        const message = error instanceof Error ? error.message : 'Unable to load columns.';
+        return [{
+          kind: 'placeholder',
+          label: 'Failed to load columns',
+          description: message
+        }];
+      }
+    }
+
     try {
       const tables = await this.databaseService.getTables(element.connection, element.schema);
       if (!tables.length) {
@@ -321,6 +366,22 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<TreeNode>
       };
     }
 
+    if (element.kind === 'column') {
+      const connection = this.connectionStore.getConnection(element.connection.id);
+      if (!connection) {
+        return undefined;
+      }
+
+      return {
+        kind: 'table',
+        connection,
+        database: element.database,
+        schema: element.schema,
+        table: element.table,
+        tableType: 'table'
+      };
+    }
+
     if (element.kind === 'role' || element.kind === 'type') {
       const connection = this.connectionStore.getConnection(element.connection.id);
       if (!connection) {
@@ -336,15 +397,5 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<TreeNode>
     }
 
     return undefined;
-  }
-
-  public buildPreviewQuery(connection: SavedConnection, schema: string, table: string): string {
-    if (connection.engine === 'sqlserver') {
-      return `SELECT TOP 100 *\nFROM [${schema}].[${table}];`;
-    }
-
-    const quote = connection.engine === 'mysql' ? '`' : '"';
-    const qualifiedName = `${quote}${schema}${quote}.${quote}${table}${quote}`;
-    return `SELECT *\nFROM ${qualifiedName}\nLIMIT 100;`;
   }
 }

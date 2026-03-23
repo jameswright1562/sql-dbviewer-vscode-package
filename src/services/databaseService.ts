@@ -1,7 +1,24 @@
 import { AwsSecretProvider } from './awsSecretProvider';
 import { ConnectionStore } from '../storage/connectionStore';
-import { DatabaseEngine, DatabaseRole, DatabaseTypeDefinition, DiscoveredDatabase, QueryExecutionResult, SavedConnection, SchemaTable } from '../model/connection';
-import { ConnectionCredentials, DatabaseAdapter, MySqlAdapter, PostgresAdapter, SqlServerAdapter } from '../db/databaseAdapters';
+import {
+  DatabaseColumn,
+  DatabaseEngine,
+  DatabaseRole,
+  DatabaseTypeDefinition,
+  DiscoveredDatabase,
+  QueryExecutionResult,
+  SavedConnection,
+  SchemaTable
+} from '../model/connection';
+import {
+  buildPreviewTableSql,
+  ConnectionCredentials,
+  DatabaseAdapter,
+  MySqlAdapter,
+  PostgresAdapter,
+  SqlServerAdapter,
+  TableReference
+} from '../db/databaseAdapters';
 import { ErrorReporter } from './errorReporter';
 
 export class DatabaseService {
@@ -60,10 +77,24 @@ export class DatabaseService {
     );
   }
 
+  public async getColumns(connection: SavedConnection, table: TableReference): Promise<DatabaseColumn[]> {
+    return this.withResolvedCredentials(connection, (adapter, credentials) =>
+      adapter.getColumns(connection, credentials, table)
+    );
+  }
+
   public async executeQuery(connection: SavedConnection, sql: string, passwordOverride?: string): Promise<QueryExecutionResult> {
     return this.withResolvedCredentials(connection, (adapter, credentials) =>
       adapter.executeQuery(connection, credentials, sql)
     , false, passwordOverride);
+  }
+
+  public async previewTable(
+    connection: SavedConnection,
+    table: TableReference,
+    passwordOverride?: string
+  ): Promise<QueryExecutionResult> {
+    return this.executeQuery(connection, buildPreviewTableSql(connection.engine, table), passwordOverride);
   }
 
   private async withResolvedCredentials<T>(

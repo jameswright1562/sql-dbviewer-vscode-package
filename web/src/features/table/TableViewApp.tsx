@@ -4,6 +4,7 @@ import { ResultGrid } from '../../components/ResultGrid';
 import {
   IncomingMessage,
   NotificationItem,
+  Order,
   TableFilterDefinition,
   TableFilterOperator,
   TableOutgoingMessage,
@@ -11,6 +12,7 @@ import {
 } from '../../lib/protocol';
 import { getEngineLabel } from '../../lib/workbenchDraft';
 import { getVsCodeApi } from '../../lib/vscode';
+import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
 
 interface FilterDraft extends TableFilterDefinition {
   id: number;
@@ -102,6 +104,14 @@ export function TableViewApp() {
     });
   };
 
+  const onSort = (columnName: string, direction?: Order) => {
+    send({
+      type: 'applySort',
+      columnName: columnName,
+      direction: direction
+    })
+  }
+
   return (
     <div className="view-shell">
       <NotificationStack notifications={notifications} />
@@ -149,7 +159,6 @@ export function TableViewApp() {
               </button>
             </div>
           </div>
-
           {filters.length === 0 ? (
             <div className="empty-state compact-empty">No filters yet. Add one to build a table query quickly.</div>
           ) : (
@@ -219,6 +228,7 @@ export function TableViewApp() {
           result={state?.result}
           errorMessage={state?.errorMessage}
           emptyMessage="The table preview is loading."
+          onSort={onSort}
         />
       </div>
     </div>

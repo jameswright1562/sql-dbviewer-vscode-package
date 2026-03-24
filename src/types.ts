@@ -1,3 +1,4 @@
+import { OrderByDirection } from 'kysely';
 import {
   ConnectionDraft,
   DatabaseColumn,
@@ -60,7 +61,8 @@ export type TableViewMessage =
   | { type: 'runQuery'; sql: string }
   | { type: 'applyFilters'; filters: TableFilterDefinition[] }
   | { type: 'resetSql' }
-  | { type: 'openWorkbench'; connectionId: string };
+  | { type: 'openWorkbench'; connectionId: string }
+  | {type: 'applySort', columnName: string, direction?: OrderByDirection};
 
 export type ExtensionToWebviewMessage =
   | { type: 'workbenchState'; state: WorkbenchState }

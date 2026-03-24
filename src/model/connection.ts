@@ -1,3 +1,5 @@
+import { OrderByDirection } from "kysely";
+
 export type DatabaseEngine = 'postgres' | 'mysql' | 'sqlserver';
 
 export type AuthMode = 'storedPassword' | 'awsSecret';
@@ -33,6 +35,7 @@ export interface ConnectionDraft extends Omit<SavedConnection, 'id' | 'updatedAt
 
 export interface QueryResultColumn {
   name: string;
+  sort?: OrderByDirection;
 }
 
 export interface QueryExecutionResult {
@@ -58,6 +61,7 @@ export interface DatabaseColumn {
   name: string;
   dataType: string;
   isNullable: boolean;
+  sort?: TableSortDefinition
 }
 
 export type TableFilterOperator =
@@ -77,6 +81,11 @@ export interface TableFilterDefinition {
   columnName: string;
   operator: TableFilterOperator;
   value?: string;
+}
+
+export interface TableSortDefinition {
+  columnName: string;
+  direction?: OrderByDirection;
 }
 
 export interface DatabaseRole {

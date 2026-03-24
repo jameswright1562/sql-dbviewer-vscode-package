@@ -1,4 +1,4 @@
-import { DatabaseEngine, TableFilterDefinition } from '../model/connection';
+import { DatabaseEngine, TableFilterDefinition, TableSortDefinition } from '../model/connection';
 import { TableReference } from './types';
 
 export const TABLE_PREVIEW_LIMIT = 100;
@@ -30,10 +30,11 @@ export function buildPreviewTableSql(
   return `SELECT *\nFROM ${formatQualifiedTableName(engine, table)}\nLIMIT ${limit};`;
 }
 
-export function buildFilteredTableSql(
+export function buildSortedAndFilteredTableSql(
   engine: DatabaseEngine,
   table: TableReference,
   filters: TableFilterDefinition[],
+    sortFilter?: TableSortDefinition,
   limit = TABLE_PREVIEW_LIMIT
 ): string {
   const normalizedFilters = filters.filter((filter) => {
@@ -41,23 +42,28 @@ export function buildFilteredTableSql(
       return false;
     }
 
-    return filter.operator === 'isNull' || filter.operator === 'isNotNull' || Boolean(filter.value?.trim());
+    return (
+      filter.operator === "isNull" ||
+      filter.operator === "isNotNull" ||
+      Boolean(filter.value?.trim())
+    );
   });
 
-  if (!normalizedFilters.length) {
-    return buildPreviewTableSql(engine, table, limit);
-  }
-
   const qualifiedTableName = formatQualifiedTableName(engine, table);
-  const whereClause = normalizedFilters
-    .map((filter) => buildFilterClause(engine, filter))
-    .join('\n  AND ');
+  const whereClause = normalizedFilters.length
+    ? `\nWHERE ${normalizedFilters
+        .map((filter) => buildFilterClause(engine, filter))
+        .join("\n  AND ")}`
+    : "";
+  const orderByClause = sortFilter && sortFilter.direction
+    ? `\nORDER BY ${sortFilter.columnName} ${sortFilter.direction.toUpperCase()}`
+    : "";
 
-  if (engine === 'sqlserver') {
-    return `SELECT TOP (${limit}) *\nFROM ${qualifiedTableName}\nWHERE ${whereClause};`;
+  if (engine === "sqlserver") {
+    return `SELECT TOP (${limit}) *\nFROM ${qualifiedTableName}${whereClause}${orderByClause};`;
   }
 
-  return `SELECT *\nFROM ${qualifiedTableName}\nWHERE ${whereClause}\nLIMIT ${limit};`;
+  return `SELECT *\nFROM ${qualifiedTableName}${whereClause}${orderByClause}\nLIMIT ${limit};`;
 }
 
 function formatQualifiedTableName(engine: DatabaseEngine, table: TableReference): string {

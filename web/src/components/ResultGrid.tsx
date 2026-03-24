@@ -1,12 +1,21 @@
-import { QueryExecutionResult } from '../lib/protocol';
+import { Order, QueryExecutionResult } from '../lib/protocol';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 
 interface ResultGridProps {
   result?: QueryExecutionResult;
   emptyMessage: string;
   errorMessage?: string;
+  onSort?: (columnName: string, direction?: Order) => void
 }
 
-export function ResultGrid({ result, emptyMessage, errorMessage }: ResultGridProps) {
+const sortCycle: Array<Order | undefined> = [
+  undefined,
+  Order.Ascending,
+  Order.Descending,
+];
+
+export function ResultGrid({ result, emptyMessage, errorMessage, onSort }: ResultGridProps) {
   if (errorMessage) {
     return (
       <section className="result-panel">
@@ -49,7 +58,18 @@ export function ResultGrid({ result, emptyMessage, errorMessage }: ResultGridPro
           <thead>
             <tr>
               {result.columns.map((column) => (
-                <th key={column.name}>{column.name}</th>
+                <th key={column.name} onClick={() => {
+                  const index = sortCycle.findIndex((x) => x === column.sort);
+                  const next =
+                    index === -1 || index === sortCycle.length - 1
+                      ? sortCycle[0]
+                      : sortCycle[index + 1];
+
+                  onSort?.(column.name, next);
+                }}>{column.name}
+                  {column.sort != undefined && (column.sort === Order.Descending
+                    ? <FontAwesomeIcon icon={faChevronDown} />
+                    : <FontAwesomeIcon icon={faChevronUp} />)}</th>
               ))}
             </tr>
           </thead>

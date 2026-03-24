@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { buildFilteredTableSql, buildPreviewTableSql } from '../db/databaseAdapters';
-import { ExplorerTableNode, TableFilterDefinition } from '../model/connection';
+import { buildSortedAndFilteredTableSql, buildPreviewTableSql } from '../db/databaseAdapters';
+import { ExplorerTableNode, TableFilterDefinition, TableSortDefinition } from '../model/connection';
 import { DatabaseService } from '../services/databaseService';
 import { ErrorReporter } from '../services/errorReporter';
 import { ConnectionStore } from '../storage/connectionStore';
@@ -14,6 +14,7 @@ export class TablePanel implements vscode.Disposable {
   private currentState?: TableViewState;
   private currentSql?: string;
   private currentFilters: TableFilterDefinition[] = [];
+  private currentSort?: TableSortDefinition;
   private readonly disposables: vscode.Disposable[] = [];
 
   public constructor(
@@ -112,6 +113,12 @@ export class TablePanel implements vscode.Disposable {
         case 'applyFilters':
           await this.applyFilters(message.filters);
           break;
+        case 'applySort':
+          await this.applySort({
+            columnName: message.columnName,
+            direction: message.direction
+          });
+          break;
         case 'resetSql':
           await this.resetSql();
           break;
@@ -146,6 +153,15 @@ export class TablePanel implements vscode.Disposable {
       const [columns, result] = await Promise.all([
         this.databaseService.getColumns(connection, { schema, table }),
         this.databaseService.executeQuery(connection, currentSql)
+        .then(x => {
+          return {...x, columns: x.columns.map(x=> {
+          if(x.name != this.currentSort?.columnName) return x;
+          return {
+            ...x,
+            sort: this.currentSort?.direction
+          }
+        })}
+      })
       ]);
 
       this.currentSql = currentSql;
@@ -207,13 +223,32 @@ export class TablePanel implements vscode.Disposable {
     }
 
     this.currentFilters = filters;
-    this.currentSql = buildFilteredTableSql(
+    this.currentSql = buildSortedAndFilteredTableSql(
       this.currentNode.connection.engine,
       {
         schema: this.currentNode.schema,
         table: this.currentNode.table
       },
-      filters
+      filters,
+      this.currentSort,
+    );
+    await this.refresh();
+  }
+
+    private async applySort(sort: TableSortDefinition): Promise<void> {
+    if (!this.currentNode) {
+      return;
+    }
+
+    this.currentSort = sort;
+    this.currentSql = buildSortedAndFilteredTableSql(
+      this.currentNode.connection.engine,
+      {
+        schema: this.currentNode.schema,
+        table: this.currentNode.table
+      },
+      this.currentFilters,
+      this.currentSort
     );
     await this.refresh();
   }

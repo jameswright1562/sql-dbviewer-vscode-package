@@ -31,7 +31,7 @@ export interface ConnectionDraft extends Omit<WorkbenchConnection, 'id' | 'updat
 }
 
 export interface QueryExecutionResult {
-  columns: Array<{ name: string }>;
+  columns: Array<{ name: string, sort?: Order }>;
   rows: Array<Record<string, unknown>>;
   rowCount: number;
   durationMs: number;
@@ -132,7 +132,13 @@ export type TableOutgoingMessage =
   | { type: 'runQuery'; sql: string }
   | { type: 'applyFilters'; filters: TableFilterDefinition[] }
   | { type: 'resetSql' }
-  | { type: 'openWorkbench'; connectionId: string };
+  | { type: 'openWorkbench'; connectionId: string }
+  | { type: 'applySort'; direction?: Order; columnName: string; };
+
+export enum Order {
+  Descending = "desc", 
+  Ascending = "asc"
+}
 
 export type WebviewKind = 'workbench' | 'sidebar' | 'table';
 

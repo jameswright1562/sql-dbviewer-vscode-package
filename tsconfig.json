@@ -16,7 +16,8 @@
     "types": [
       "node",
       "vscode"
-    ]
+    ],
+    "ignoreDeprecations": "6.0"
   },
   "include": [
     "src/**/*.ts"

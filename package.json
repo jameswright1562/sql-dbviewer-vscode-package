@@ -2,7 +2,7 @@
   "name": "sql-connection-workbench",
   "displayName": "SQL Connection Workbench",
   "description": "Professional SQL data exploration for VS Code with AWS Secrets Manager-backed passwords.",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "publisher": "JamesWright",
   "license": "MIT",
   "engines": {

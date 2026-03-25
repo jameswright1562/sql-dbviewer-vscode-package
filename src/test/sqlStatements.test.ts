@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildFilteredTableSql } from "../db/sqlStatements";
+import { buildSortedAndFilteredTableSql } from "../db/sqlStatements";
 
-test("buildFilteredTableSql creates a preview query with filters for postgres", () => {
-  const sql = buildFilteredTableSql(
+test("buildSortedAndFilteredTableSql creates a preview query with filters for postgres", () => {
+  const sql = buildSortedAndFilteredTableSql(
     "postgres",
     { schema: "public", table: "orders" },
     [
@@ -18,8 +18,8 @@ test("buildFilteredTableSql creates a preview query with filters for postgres", 
   );
 });
 
-test("buildFilteredTableSql falls back to the base preview query when filters are empty", () => {
-  const sql = buildFilteredTableSql(
+test("buildSortedAndFilteredTableSql falls back to the base preview query when filters are empty", () => {
+  const sql = buildSortedAndFilteredTableSql(
     "mysql",
     { schema: "analytics", table: "events" },
     [],

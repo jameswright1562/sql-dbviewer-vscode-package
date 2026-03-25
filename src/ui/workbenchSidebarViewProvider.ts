@@ -1,18 +1,24 @@
-import * as vscode from 'vscode';
-import { ConnectionStore } from '../storage/connectionStore';
-import { ErrorReporter } from '../services/errorReporter';
-import { ExtensionToWebviewMessage, SidebarMessage, SidebarState } from '../types';
-import { getReactWebviewHtml } from './webview/reactWebviewHtml';
+import * as vscode from "vscode";
+import { ConnectionStore } from "../storage/connectionStore";
+import { ErrorReporter } from "../services/errorReporter";
+import {
+  ExtensionToWebviewMessage,
+  SidebarMessage,
+  SidebarState,
+} from "../types";
+import { getReactWebviewHtml } from "./webview/reactWebviewHtml";
 
-export class WorkbenchSidebarViewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = 'sqlConnectionWorkbench.workspaceSidebar';
+export class WorkbenchSidebarViewProvider
+  implements vscode.WebviewViewProvider
+{
+  public static readonly viewType = "sqlConnectionWorkbench.workspaceSidebar";
 
   private view?: vscode.WebviewView;
 
   public constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly connectionStore: ConnectionStore,
-    private readonly errorReporter: ErrorReporter
+    private readonly errorReporter: ErrorReporter,
   ) {
     this.connectionStore.onDidChange(() => {
       void this.updateView();
@@ -23,9 +29,15 @@ export class WorkbenchSidebarViewProvider implements vscode.WebviewViewProvider 
     this.view = webviewView;
     webviewView.webview.options = {
       enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'web', 'dist')]
+      localResourceRoots: [
+        vscode.Uri.joinPath(this.context.extensionUri, "web", "dist"),
+      ],
     };
-    webviewView.webview.html = getReactWebviewHtml(this.context.extensionUri, webviewView.webview, 'sidebar');
+    webviewView.webview.html = getReactWebviewHtml(
+      this.context.extensionUri,
+      webviewView.webview,
+      "sidebar",
+    );
 
     webviewView.webview.onDidReceiveMessage((message: SidebarMessage) => {
       void this.handleMessage(message);
@@ -41,25 +53,32 @@ export class WorkbenchSidebarViewProvider implements vscode.WebviewViewProvider 
   private async handleMessage(message: SidebarMessage): Promise<void> {
     try {
       switch (message.type) {
-        case 'ready':
+        case "ready":
           await this.updateView();
           break;
-        case 'addConnection':
-          await vscode.commands.executeCommand('sqlConnectionWorkbench.addConnection');
+        case "addConnection":
+          await vscode.commands.executeCommand(
+            "sqlConnectionWorkbench.addConnection",
+          );
           break;
-        case 'refresh':
-          await vscode.commands.executeCommand('sqlConnectionWorkbench.refreshConnections');
+        case "refresh":
+          await vscode.commands.executeCommand(
+            "sqlConnectionWorkbench.refreshConnections",
+          );
           break;
-        case 'openWorkbench':
-          await vscode.commands.executeCommand('sqlConnectionWorkbench.openWorkbench', message.connectionId);
+        case "openWorkbench":
+          await vscode.commands.executeCommand(
+            "sqlConnectionWorkbench.openWorkbench",
+            message.connectionId,
+          );
           break;
       }
     } catch (error) {
       this.errorReporter.error(error, {
-        operation: 'workbenchSidebar.handleMessage',
+        operation: "workbenchSidebar.handleMessage",
         details: {
-          messageType: message.type
-        }
+          messageType: message.type,
+        },
       });
     }
   }
@@ -72,14 +91,16 @@ export class WorkbenchSidebarViewProvider implements vscode.WebviewViewProvider 
     const connections = this.connectionStore.getConnections();
     const state: SidebarState = {
       connections: await Promise.all(
-        connections.map((connection) => this.connectionStore.toWebviewConnection(connection))
+        connections.map((connection) =>
+          this.connectionStore.toWebviewConnection(connection),
+        ),
       ),
-      selectedConnectionId: this.connectionStore.getLastSelectedConnectionId()
+      selectedConnectionId: this.connectionStore.getLastSelectedConnectionId(),
     };
 
     await this.view.webview.postMessage({
-      type: 'sidebarState',
-      state
+      type: "sidebarState",
+      state,
     } satisfies ExtensionToWebviewMessage);
   }
 }

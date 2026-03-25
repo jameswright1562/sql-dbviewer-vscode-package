@@ -1,32 +1,7 @@
+@import "tailwindcss";
+
 :root {
-  --bg: var(--vscode-editor-background);
-  --panel: color-mix(in srgb, var(--vscode-sideBar-background) 82%, transparent);
-  --panel-strong: color-mix(in srgb, var(--vscode-editorWidget-background, var(--vscode-editor-background)) 92%, transparent);
-  --border: var(--vscode-panel-border, var(--vscode-contrastBorder, transparent));
-  --border-strong: var(--vscode-focusBorder, var(--vscode-textLink-foreground));
-  --text: var(--vscode-foreground);
-  --muted: var(--vscode-descriptionForeground);
-  --accent: var(--vscode-button-background);
-  --accent-text: var(--vscode-button-foreground);
-  --accent-hover: var(--vscode-button-hoverBackground, var(--vscode-button-background));
-  --danger: var(--vscode-errorForeground);
-  --secondary: var(--vscode-button-secondaryBackground, var(--vscode-input-background));
-  --secondary-hover: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
-  --secondary-text: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
-  --input-bg: var(--vscode-input-background);
-  --input-surface: color-mix(in srgb, var(--vscode-input-background) 78%, white 22%);
-  --input-text: var(--vscode-input-foreground);
-  --input-border: color-mix(in srgb, var(--vscode-input-border, var(--border-strong)) 60%, var(--border-strong) 40%);
-  --input-border-hover: color-mix(in srgb, var(--border-strong) 70%, white 30%);
-  --input-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 6%, transparent);
-  --selection-bg: var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground));
-  --selection-text: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
-  --badge-bg: var(--vscode-badge-background, var(--secondary));
-  --badge-text: var(--vscode-badge-foreground, var(--text));
-  --radius-lg: 24px;
-  --radius-md: 16px;
-  --radius-sm: 12px;
-  --shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
+  color-scheme: dark;
 }
 
 * {
@@ -39,395 +14,77 @@ body,
   min-height: 100%;
   margin: 0;
 }
-
 body {
   background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 34%),
-    linear-gradient(180deg, color-mix(in srgb, var(--bg) 82%, black 18%) 0%, var(--bg) 100%);
-  color: var(--text);
-  font-family: var(--vscode-font-family, 'Segoe UI', sans-serif);
+    radial-gradient(
+      circle at top right,
+      color-mix(in srgb, var(--vscode-button-background) 18%, transparent) 0%,
+      transparent 34%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--vscode-editor-background) 82%, black 18%) 0%,
+      var(--vscode-editor-background) 100%
+    );
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size:
+    100% 100%,
+    100% 100%;
+  color: var(--vscode-foreground);
+  font-family: var(--vscode-font-family, "Segoe UI", sans-serif);
 }
 
-button,
-input,
-select,
-textarea,
-pre {
-  font: inherit;
-}
-
-button {
-  border: 1px solid var(--input-border);
-  border-radius: 999px;
-  padding: 10px 16px;
-  background: var(--secondary);
-  color: var(--secondary-text);
-  cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
-}
-
-button:hover:not(:disabled) {
-  background: var(--secondary-hover);
-  border-color: var(--border-strong);
-  transform: translateY(-1px);
-}
-
-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-text);
-}
-
-button.primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-button.danger {
-  color: var(--danger);
-}
-
-input,
-select,
-textarea {
+vscode-data-grid {
+  border: 1rem;
+  box-shadow: 1rem;
   width: 100%;
-  border: 1px solid var(--input-border);
-  border-radius: var(--radius-sm);
-  padding: 11px 13px;
-  background: linear-gradient(180deg, var(--input-surface) 0%, color-mix(in srgb, var(--input-bg) 88%, black 12%) 100%);
-  color: var(--input-text);
-  box-shadow: var(--input-shadow);
-  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
 }
 
-input:hover,
-select:hover,
-textarea:hover {
-  border-color: var(--input-border-hover);
+vscode-data-grid-cell {
+  min-width: 0;
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: color-mix(in srgb, var(--muted) 82%, white 18%);
+vscode-data-grid-cell:hover {
+  background: var(--list-active-selection-background);
+  color: var(--list-active-selection-foreground);
+  outline: none;
 }
 
-textarea {
+vscode-text-field,
+vscode-dropdown,
+vscode-text-area {
+  width: 100%;
+}
+
+vscode-dropdown::part(control),
+vscode-text-area::part(root),
+vscode-text-field::part(root),
+vscode-button {
+  border-radius: 0.5rem;
+}
+
+vscode-text-area::part(control) {
   min-height: 190px;
-  resize: vertical;
   font-family: var(--vscode-editor-font-family, Consolas, monospace);
   line-height: 1.5;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-  outline: 1px solid var(--border-strong);
-  border-color: var(--border-strong);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--border-strong) 45%, transparent),
-    0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+vscode-button.danger {
+  --button-secondary-foreground: var(--vscode-errorForeground);
 }
 
-.view-shell {
-  min-height: 100vh;
-  padding: 16px;
-}
-
-.app-shell {
-  display: grid;
-  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
-  gap: 16px;
-}
-
-.main-column,
-.table-view {
-  display: grid;
-  gap: 16px;
-}
-
-.panel {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, transparent) 0%, color-mix(in srgb, var(--panel-strong) 96%, transparent) 100%);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(14px);
-}
-
-.compact-panel,
-.section,
-.hero,
-.sidebar-header {
-  padding: 18px;
-}
-
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - 32px);
-}
-
-.sidebar-header {
-  border-bottom: 1px solid var(--border);
-}
-
-.eyebrow {
-  margin-bottom: 10px;
-  color: var(--muted);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.sidebar-title,
-.hero-title,
-.section-title {
-  margin: 0;
-}
-
-.hero-title {
-  font-size: 28px;
-  line-height: 1.1;
-}
-
-.section-title {
-  font-size: 18px;
-}
-
-.subtle,
-.hint,
-.connection-meta {
-  color: var(--muted);
-}
-
-.button-row,
-.chip-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.connection-list {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-}
-
-.connection-card {
+vscode-button.connection-card::part(control) {
   width: 100%;
+  justify-content: flex-start;
   padding: 14px;
-  border-radius: var(--radius-md);
-  text-align: left;
-  background: color-mix(in srgb, var(--panel-strong) 82%, transparent);
-}
-
-.connection-card.selected {
-  background: var(--selection-bg);
-  color: var(--selection-text);
-}
-
-.connection-card strong {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 15px;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--badge-bg);
-  color: var(--badge-text);
-  font-size: 12px;
-}
-
-.chip.strong {
-  border-color: var(--border-strong);
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.nested-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.field {
-  display: grid;
-  gap: 6px;
-}
-
-.field label {
-  font-size: 12px;
-  color: color-mix(in srgb, var(--text) 72%, var(--muted) 28%);
-  font-weight: 600;
-}
-
-.field-full {
-  grid-column: 1 / -1;
-}
-
-.stack,
-.discovery-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.filter-list {
-  display: grid;
-  gap: 10px;
-}
-
-.filter-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1.2fr) auto;
-  gap: 10px;
-  align-items: center;
-}
-
-.discovery-card {
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--panel-strong) 86%, transparent);
-}
-
-.discovery-card.selected {
-  border-color: var(--border-strong);
-  background: color-mix(in srgb, var(--selection-bg) 78%, transparent);
-}
-
-.discovery-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.query-textarea,
-.sql-preview {
-  width: 100%;
-}
-
-.sql-preview {
-  margin: 0;
-  padding: 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--panel-strong) 88%, transparent);
-  white-space: pre-wrap;
-}
-
-.result-panel {
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--panel-strong) 92%, transparent);
-}
-
-.result-meta {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border);
-}
-
-.table-scroll {
-  overflow: auto;
-}
-
-.result-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.result-table th,
-.result-table td {
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-  vertical-align: top;
-}
-
-.result-table th {
-  position: sticky;
-  top: 0;
-  background: color-mix(in srgb, var(--panel) 94%, transparent);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 11px;
-}
-
-.empty-state {
-  padding: 24px 18px;
-  text-align: center;
-  color: var(--muted);
-}
-
-.compact-empty {
-  padding: 12px 0;
   text-align: left;
 }
 
-.toast-stack {
-  position: fixed;
-  top: 18px;
-  right: 18px;
-  display: grid;
-  gap: 10px;
-  z-index: 20;
-}
-
-.toast {
-  min-width: 260px;
-  max-width: 380px;
-  padding: 14px 16px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--panel-strong) 96%, transparent);
-  box-shadow: var(--shadow);
-}
-
-.toast.error {
-  border-color: var(--danger);
-}
-
-.sidebar-view {
-  padding: 12px;
-}
-
-@media (max-width: 1100px) {
-  .app-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .form-grid,
-  .nested-grid,
-  .filter-row {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    min-height: auto;
-  }
+vscode-button.connection-card.selected::part(control) {
+  background: var(
+    --vscode-list-activeSelectionBackground,
+    var(--vscode-list-hoverBackground)
+  );
+  color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
 }

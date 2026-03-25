@@ -1,33 +1,49 @@
-import * as vscode from 'vscode';
-import { DatabaseService } from '../services/databaseService';
-import { ConnectionStore } from '../storage/connectionStore';
+import * as vscode from "vscode";
+import { DatabaseService } from "../services/databaseService";
+import { ConnectionStore } from "../storage/connectionStore";
 import {
   ConnectionDraft,
   DiscoveredDatabase,
   ExplorerConnectionNode,
   ExplorerTableNode,
   QueryExecutionResult,
-  SavedConnection
-} from '../model/connection';
-import { ConnectionTreeProvider } from '../tree/connectionTreeProvider';
-import { ExtensionToWebviewMessage, WorkbenchMessage, WorkbenchState } from '../types';
-import { ErrorReporter } from '../services/errorReporter';
-import { resolveSelectedConnectionId } from './workbenchSelection';
-import { getPanelIconPath } from './webview/panelIcon';
-import { getReactWebviewHtml } from './webview/reactWebviewHtml';
-import { getDefaultWorkbenchQuery, materializeDraft, normalizeDraft } from './workbenchDraft';
+  SavedConnection,
+} from "../model/connection";
+import { ConnectionTreeProvider } from "../tree/connectionTreeProvider";
+import {
+  ExtensionToWebviewMessage,
+  WorkbenchMessage,
+  WorkbenchState,
+} from "../types";
+import { ErrorReporter } from "../services/errorReporter";
+import { resolveSelectedConnectionId } from "./workbenchSelection";
+import { getPanelIconPath } from "./webview/panelIcon";
+import { getReactWebviewHtml } from "./webview/reactWebviewHtml";
+import {
+  getDefaultWorkbenchQuery,
+  materializeDraft,
+  normalizeDraft,
+} from "./workbenchDraft";
 
-type WorkbenchTarget = ExplorerConnectionNode | ExplorerTableNode | SavedConnection | string | undefined;
+type WorkbenchTarget =
+  | ExplorerConnectionNode
+  | ExplorerTableNode
+  | SavedConnection
+  | string
+  | undefined;
 
 export class WorkbenchPanel implements vscode.Disposable {
   private panel?: vscode.WebviewPanel;
   private selectedConnectionId?: string;
   private isCreatingNewConnection = false;
   private discoveredDatabases: DiscoveredDatabase[] = [];
-  private draftQuery = 'SELECT CURRENT_TIMESTAMP;';
+  private draftQuery = "SELECT CURRENT_TIMESTAMP;";
   private draftResult?: QueryExecutionResult;
   private readonly queryByConnectionId = new Map<string, string>();
-  private readonly resultByConnectionId = new Map<string, QueryExecutionResult>();
+  private readonly resultByConnectionId = new Map<
+    string,
+    QueryExecutionResult
+  >();
   private readonly disposables: vscode.Disposable[] = [];
 
   public constructor(
@@ -35,20 +51,28 @@ export class WorkbenchPanel implements vscode.Disposable {
     private readonly connectionStore: ConnectionStore,
     private readonly databaseService: DatabaseService,
     private readonly _treeProvider: ConnectionTreeProvider,
-    private readonly errorReporter: ErrorReporter
+    private readonly errorReporter: ErrorReporter,
   ) {}
 
   public async show(target?: WorkbenchTarget): Promise<void> {
-    await this.errorReporter.capture({
-      operation: 'workbench.show',
-      details: {
-        targetType: typeof target === 'string' ? 'connectionId' : target ? 'connection' : 'none'
-      }
-    }, async () => {
-      this.applyTarget(target);
-      this.ensurePanel().reveal(vscode.ViewColumn.One);
-      await this.postState();
-    });
+    await this.errorReporter.capture(
+      {
+        operation: "workbench.show",
+        details: {
+          targetType:
+            typeof target === "string"
+              ? "connectionId"
+              : target
+                ? "connection"
+                : "none",
+        },
+      },
+      async () => {
+        this.applyTarget(target);
+        this.ensurePanel().reveal(vscode.ViewColumn.One);
+        await this.postState();
+      },
+    );
   }
 
   public async showNewConnection(): Promise<void> {
@@ -61,63 +85,74 @@ export class WorkbenchPanel implements vscode.Disposable {
   }
 
   public async handleConnectionsChanged(): Promise<void> {
-    await this.errorReporter.capture({
-      operation: 'workbench.handleConnectionsChanged'
-    }, async () => {
-      const connections = this.connectionStore.getConnections();
-      this.selectedConnectionId = resolveSelectedConnectionId({
-        connections,
-        selectedConnectionId: this.selectedConnectionId,
-        lastSelectedConnectionId: this.connectionStore.getLastSelectedConnectionId(),
-        isCreatingNewConnection: this.isCreatingNewConnection
-      });
+    await this.errorReporter.capture(
+      {
+        operation: "workbench.handleConnectionsChanged",
+      },
+      async () => {
+        const connections = this.connectionStore.getConnections();
+        this.selectedConnectionId = resolveSelectedConnectionId({
+          connections,
+          selectedConnectionId: this.selectedConnectionId,
+          lastSelectedConnectionId:
+            this.connectionStore.getLastSelectedConnectionId(),
+          isCreatingNewConnection: this.isCreatingNewConnection,
+        });
 
-      await this.postState();
-    });
+        await this.postState();
+      },
+    );
   }
 
   public async promptSchemaSelection(connectionId: string): Promise<void> {
-    await this.errorReporter.capture({
-      operation: 'workbench.promptSchemaSelection',
-      details: { connectionId }
-    }, async () => {
-      const connection = this.connectionStore.getConnection(connectionId);
-      if (!connection) {
-        return;
-      }
+    await this.errorReporter.capture(
+      {
+        operation: "workbench.promptSchemaSelection",
+        details: { connectionId },
+      },
+      async () => {
+        const connection = this.connectionStore.getConnection(connectionId);
+        if (!connection) {
+          return;
+        }
 
-      const schemas = await this.databaseService.getSchemas(connection);
-      const schemaItems: Array<vscode.QuickPickItem & { picked?: boolean }> = [
-        {
-          kind: vscode.QuickPickItemKind.Separator,
-          label: connection.database
-        },
-        ...schemas.map((schema) => ({
-          label: schema,
-          description: connection.database,
-          picked: connection.visibleSchemas.includes(schema)
-        }))
-      ];
+        const schemas = await this.databaseService.getSchemas(connection);
+        const schemaItems: Array<vscode.QuickPickItem & { picked?: boolean }> =
+          [
+            {
+              kind: vscode.QuickPickItemKind.Separator,
+              label: connection.database,
+            },
+            ...schemas.map((schema) => ({
+              label: schema,
+              description: connection.database,
+              picked: connection.visibleSchemas.includes(schema),
+            })),
+          ];
 
-      const picks = await vscode.window.showQuickPick(schemaItems, {
-        canPickMany: true,
-        title: `Visible schemas for ${connection.name}`,
-        placeHolder: 'Choose schemas under the database shown above.'
-      });
+        const picks = await vscode.window.showQuickPick(schemaItems, {
+          canPickMany: true,
+          title: `Visible schemas for ${connection.name}`,
+          placeHolder: "Choose schemas under the database shown above.",
+        });
 
-      if (!picks) {
-        return;
-      }
+        if (!picks) {
+          return;
+        }
 
-      await this.connectionStore.saveConnection({
-        ...connection,
-        visibleSchemas: picks
-          .filter((pick) => pick.kind !== vscode.QuickPickItemKind.Separator)
-          .map((pick) => pick.label)
-      });
+        await this.connectionStore.saveConnection({
+          ...connection,
+          visibleSchemas: picks
+            .filter((pick) => pick.kind !== vscode.QuickPickItemKind.Separator)
+            .map((pick) => pick.label),
+        });
 
-      await this.notify('info', `Updated visible schemas for ${connection.name}.`);
-    });
+        await this.notify(
+          "info",
+          `Updated visible schemas for ${connection.name}.`,
+        );
+      },
+    );
   }
 
   public dispose(): void {
@@ -132,19 +167,38 @@ export class WorkbenchPanel implements vscode.Disposable {
       return this.panel;
     }
 
-    const panel = vscode.window.createWebviewPanel('sqlConnectionWorkbench.panel', 'SQL Workbench', vscode.ViewColumn.One, {
-      enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'web', 'dist')]
-    });
+    const panel = vscode.window.createWebviewPanel(
+      "sqlConnectionWorkbench.panel",
+      "SQL Workbench",
+      vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        localResourceRoots: [
+          vscode.Uri.joinPath(this.context.extensionUri, "web", "dist"),
+        ],
+      },
+    );
 
     panel.iconPath = getPanelIconPath(this.context.extensionUri);
-    panel.webview.html = getReactWebviewHtml(this.context.extensionUri, panel.webview, 'workbench');
-    panel.webview.onDidReceiveMessage((message: WorkbenchMessage) => {
-      void this.handleMessage(message);
-    }, undefined, this.disposables);
-    panel.onDidDispose(() => {
-      this.panel = undefined;
-    }, undefined, this.disposables);
+    panel.webview.html = getReactWebviewHtml(
+      this.context.extensionUri,
+      panel.webview,
+      "workbench",
+    );
+    panel.webview.onDidReceiveMessage(
+      (message: WorkbenchMessage) => {
+        void this.handleMessage(message);
+      },
+      undefined,
+      this.disposables,
+    );
+    panel.onDidDispose(
+      () => {
+        this.panel = undefined;
+      },
+      undefined,
+      this.disposables,
+    );
 
     this.panel = panel;
     return panel;
@@ -153,48 +207,49 @@ export class WorkbenchPanel implements vscode.Disposable {
   private async handleMessage(message: WorkbenchMessage): Promise<void> {
     try {
       switch (message.type) {
-        case 'ready':
+        case "ready":
           await this.postState();
           break;
-        case 'selectConnection':
+        case "selectConnection":
           await this.handleSelectConnection(message.connectionId);
           break;
-        case 'newConnection':
+        case "newConnection":
           await this.showNewConnection();
           break;
-        case 'saveConnection':
+        case "saveConnection":
           await this.handleSaveConnection(message.draft);
           break;
-        case 'deleteConnection':
+        case "deleteConnection":
           await this.handleDeleteConnection(message.connectionId);
           break;
-        case 'testConnection':
+        case "testConnection":
           await this.handleTestConnection(message.draft);
           break;
-        case 'discoverDatabases':
+        case "discoverDatabases":
           await this.handleDiscoverDatabases(message.draft);
           break;
-        case 'runQuery':
+        case "runQuery":
           await this.handleRunSavedQuery(message.connectionId, message.sql);
           break;
-        case 'runDraftQuery':
+        case "runDraftQuery":
           await this.handleRunDraftQuery(message.draft, message.sql);
           break;
-        case 'chooseSchemas':
+        case "chooseSchemas":
           await this.promptSchemaSelection(message.connectionId);
           await this.postState();
           break;
       }
     } catch (error) {
       const normalized = this.errorReporter.error(error, {
-        operation: 'workbench.handleMessage',
+        operation: "workbench.handleMessage",
         details: {
           messageType: message.type,
-          connectionId: 'connectionId' in message ? message.connectionId : undefined
-        }
+          connectionId:
+            "connectionId" in message ? message.connectionId : undefined,
+        },
       });
 
-      await this.notify('error', normalized.message);
+      await this.notify("error", normalized.message);
     }
   }
 
@@ -215,7 +270,10 @@ export class WorkbenchPanel implements vscode.Disposable {
     const normalizedDraft = normalizeDraft(draft);
     if (!normalizedDraft.database.trim()) {
       await this.discoverDatabasesForDraft(normalizedDraft);
-      await this.notify('info', 'Choose a discovered database before saving the connection.');
+      await this.notify(
+        "info",
+        "Choose a discovered database before saving the connection.",
+      );
       await this.postState();
       return;
     }
@@ -226,7 +284,7 @@ export class WorkbenchPanel implements vscode.Disposable {
     this.clearDraftExecution();
     this.ensureQuery(saved);
     await this.postState();
-    await this.notify('info', `Saved ${saved.name}.`);
+    await this.notify("info", `Saved ${saved.name}.`);
   }
 
   private async handleDeleteConnection(connectionId: string): Promise<void> {
@@ -236,7 +294,7 @@ export class WorkbenchPanel implements vscode.Disposable {
     this.clearDiscovery();
     this.clearDraftExecution();
     await this.handleConnectionsChanged();
-    await this.notify('info', 'Connection removed.');
+    await this.notify("info", "Connection removed.");
   }
 
   private async handleTestConnection(draft: ConnectionDraft): Promise<void> {
@@ -248,8 +306,14 @@ export class WorkbenchPanel implements vscode.Disposable {
     }
 
     const connection = materializeDraft(normalizedDraft);
-    await this.databaseService.testConnection(connection, normalizedDraft.password);
-    await this.notify('info', `Connection test for ${connection.name} succeeded.`);
+    await this.databaseService.testConnection(
+      connection,
+      normalizedDraft.password,
+    );
+    await this.notify(
+      "info",
+      `Connection test for ${connection.name} succeeded.`,
+    );
   }
 
   private async handleDiscoverDatabases(draft: ConnectionDraft): Promise<void> {
@@ -257,25 +321,34 @@ export class WorkbenchPanel implements vscode.Disposable {
     await this.postState();
   }
 
-  private async handleRunSavedQuery(connectionId: string, sql: string): Promise<void> {
+  private async handleRunSavedQuery(
+    connectionId: string,
+    sql: string,
+  ): Promise<void> {
     const connection = this.requireConnection(connectionId);
     const trimmedSql = sql.trim();
     if (!trimmedSql) {
-      throw new Error('Enter a SQL query before running it.');
+      throw new Error("Enter a SQL query before running it.");
     }
 
     this.selectedConnectionId = connection.id;
     this.queryByConnectionId.set(connection.id, sql);
-    const result = await this.databaseService.executeQuery(connection, trimmedSql);
+    const result = await this.databaseService.executeQuery(
+      connection,
+      trimmedSql,
+    );
     this.resultByConnectionId.set(connection.id, result);
     await this.postState();
   }
 
-  private async handleRunDraftQuery(draft: ConnectionDraft, sql: string): Promise<void> {
+  private async handleRunDraftQuery(
+    draft: ConnectionDraft,
+    sql: string,
+  ): Promise<void> {
     const normalizedDraft = normalizeDraft(draft);
     const trimmedSql = sql.trim();
     if (!trimmedSql) {
-      throw new Error('Enter a SQL query before running it.');
+      throw new Error("Enter a SQL query before running it.");
     }
 
     this.draftQuery = sql;
@@ -286,7 +359,11 @@ export class WorkbenchPanel implements vscode.Disposable {
     }
 
     const connection = materializeDraft(normalizedDraft);
-    this.draftResult = await this.databaseService.executeQuery(connection, trimmedSql, normalizedDraft.password);
+    this.draftResult = await this.databaseService.executeQuery(
+      connection,
+      trimmedSql,
+      normalizedDraft.password,
+    );
     await this.postState();
   }
 
@@ -297,19 +374,20 @@ export class WorkbenchPanel implements vscode.Disposable {
         return;
       }
 
-      this.selectedConnectionId = this.selectedConnectionId
-        ?? this.connectionStore.getLastSelectedConnectionId()
-        ?? this.connectionStore.getConnections()[0]?.id;
+      this.selectedConnectionId =
+        this.selectedConnectionId ??
+        this.connectionStore.getLastSelectedConnectionId() ??
+        this.connectionStore.getConnections()[0]?.id;
       return;
     }
 
-    if (typeof target === 'string') {
+    if (typeof target === "string") {
       this.isCreatingNewConnection = false;
       this.selectedConnectionId = target;
       return;
     }
 
-    if ('kind' in target) {
+    if ("kind" in target) {
       this.isCreatingNewConnection = false;
       this.selectedConnectionId = target.connection.id;
       return;
@@ -319,16 +397,27 @@ export class WorkbenchPanel implements vscode.Disposable {
     this.selectedConnectionId = target.id;
   }
 
-  private async discoverDatabasesForDraft(draft: ConnectionDraft): Promise<void> {
+  private async discoverDatabasesForDraft(
+    draft: ConnectionDraft,
+  ): Promise<void> {
     const connection = materializeDraft(draft);
-    this.discoveredDatabases = await this.databaseService.discoverDatabases(connection, draft.password);
+    this.discoveredDatabases = await this.databaseService.discoverDatabases(
+      connection,
+      draft.password,
+    );
 
     if (!this.discoveredDatabases.length) {
-      await this.notify('info', 'No accessible databases were discovered with the supplied credentials.');
+      await this.notify(
+        "info",
+        "No accessible databases were discovered with the supplied credentials.",
+      );
       return;
     }
 
-    await this.notify('info', `Discovered ${this.discoveredDatabases.length} accessible database(s).`);
+    await this.notify(
+      "info",
+      `Discovered ${this.discoveredDatabases.length} accessible database(s).`,
+    );
   }
 
   private clearDiscovery(): void {
@@ -342,7 +431,7 @@ export class WorkbenchPanel implements vscode.Disposable {
   private requireConnection(connectionId: string): SavedConnection {
     const connection = this.connectionStore.getConnection(connectionId);
     if (!connection) {
-      throw new Error('The selected connection no longer exists.');
+      throw new Error("The selected connection no longer exists.");
     }
 
     return connection;
@@ -350,7 +439,10 @@ export class WorkbenchPanel implements vscode.Disposable {
 
   private ensureQuery(connection: SavedConnection): void {
     if (!this.queryByConnectionId.has(connection.id)) {
-      this.queryByConnectionId.set(connection.id, getDefaultWorkbenchQuery(connection));
+      this.queryByConnectionId.set(
+        connection.id,
+        getDefaultWorkbenchQuery(connection),
+      );
     }
   }
 
@@ -363,8 +455,9 @@ export class WorkbenchPanel implements vscode.Disposable {
     const selectedId = resolveSelectedConnectionId({
       connections,
       selectedConnectionId: this.selectedConnectionId,
-      lastSelectedConnectionId: this.connectionStore.getLastSelectedConnectionId(),
-      isCreatingNewConnection: this.isCreatingNewConnection
+      lastSelectedConnectionId:
+        this.connectionStore.getLastSelectedConnectionId(),
+      isCreatingNewConnection: this.isCreatingNewConnection,
     });
 
     if (selectedId) {
@@ -377,46 +470,55 @@ export class WorkbenchPanel implements vscode.Disposable {
     this.selectedConnectionId = selectedId;
 
     const webviewConnections = await Promise.all(
-      connections.map((connection) => this.connectionStore.toWebviewConnection(connection))
+      connections.map((connection) =>
+        this.connectionStore.toWebviewConnection(connection),
+      ),
     );
 
     const state: WorkbenchState = {
       connections: webviewConnections,
       selectedConnectionId: selectedId,
-      currentQuery: selectedId ? this.queryByConnectionId.get(selectedId) ?? '' : this.draftQuery,
-      lastResult: selectedId ? this.resultByConnectionId.get(selectedId) : this.draftResult,
-      discoveredDatabases: this.discoveredDatabases
+      currentQuery: selectedId
+        ? (this.queryByConnectionId.get(selectedId) ?? "")
+        : this.draftQuery,
+      lastResult: selectedId
+        ? this.resultByConnectionId.get(selectedId)
+        : this.draftResult,
+      discoveredDatabases: this.discoveredDatabases,
     };
 
     const delivered = await this.panel.webview.postMessage({
-      type: 'workbenchState',
-      state
+      type: "workbenchState",
+      state,
     } satisfies ExtensionToWebviewMessage);
 
     if (!delivered) {
-      this.errorReporter.warn('Workbench state message was not delivered.', {
-        selectedConnectionId: selectedId
+      this.errorReporter.warn("Workbench state message was not delivered.", {
+        selectedConnectionId: selectedId,
       });
     }
   }
 
-  private async notify(level: 'info' | 'error', message: string): Promise<void> {
+  private async notify(
+    level: "info" | "error",
+    message: string,
+  ): Promise<void> {
     if (this.panel) {
       const delivered = await this.panel.webview.postMessage({
-        type: 'notification',
+        type: "notification",
         level,
-        message
+        message,
       } satisfies ExtensionToWebviewMessage);
 
       if (!delivered) {
-        this.errorReporter.warn('Workbench notification was not delivered.', {
+        this.errorReporter.warn("Workbench notification was not delivered.", {
           level,
-          message
+          message,
         });
       }
     }
 
-    if (level === 'error') {
+    if (level === "error") {
       void vscode.window.showErrorMessage(message);
     }
   }

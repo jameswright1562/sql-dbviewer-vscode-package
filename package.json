@@ -139,7 +139,8 @@
     "kysely": "^0.28.14",
     "mssql": "latest",
     "mysql2": "latest",
-    "pg": "latest"
+    "pg": "latest",
+    "prettier": "^3.8.1"
   },
   "devDependencies": {
     "@vscode/vsce": "latest",

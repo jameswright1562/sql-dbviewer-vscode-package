@@ -1,4 +1,4 @@
-import { Client, ClientConfig } from 'pg';
+import { Client, ClientConfig } from "pg";
 import {
   DatabaseColumn,
   DatabaseRole,
@@ -6,9 +6,9 @@ import {
   DiscoveredDatabase,
   QueryExecutionResult,
   SavedConnection,
-  SchemaTable
-} from '../../model/connection';
-import { ConnectionCredentials, DatabaseAdapter } from '../types';
+  SchemaTable,
+} from "../../model/connection";
+import { ConnectionCredentials, DatabaseAdapter } from "../types";
 
 type PostgresRow = Record<string, unknown>;
 
@@ -38,21 +38,30 @@ interface TableRow {
 interface ColumnRow {
   column_name: string;
   data_type: string;
-  is_nullable: 'YES' | 'NO';
+  is_nullable: "YES" | "NO";
 }
 
 export class PostgresAdapter implements DatabaseAdapter {
-  public readonly engine = 'postgres' as const;
+  public readonly engine = "postgres" as const;
 
-  public async testConnection(connection: SavedConnection, credentials: ConnectionCredentials): Promise<void> {
+  public async testConnection(
+    connection: SavedConnection,
+    credentials: ConnectionCredentials,
+  ): Promise<void> {
     await this.withClient(connection, credentials.password, async (client) => {
-      await client.query('select 1');
+      await client.query("select 1");
     });
   }
 
-  public async discoverDatabases(connection: SavedConnection, credentials: ConnectionCredentials): Promise<DiscoveredDatabase[]> {
-    return this.withClient(connection, credentials.password, async (client) => {
-      const result = await client.query<DatabaseNameRow>(`
+  public async discoverDatabases(
+    connection: SavedConnection,
+    credentials: ConnectionCredentials,
+  ): Promise<DiscoveredDatabase[]> {
+    return this.withClient(
+      connection,
+      credentials.password,
+      async (client) => {
+        const result = await client.query<DatabaseNameRow>(`
         select datname
         from pg_database
         where datallowconn = true
@@ -61,24 +70,43 @@ export class PostgresAdapter implements DatabaseAdapter {
         order by datname
       `);
 
-      const discovered = await Promise.allSettled(
-        result.rows.map(async ({ datname }) => ({
-          name: datname,
-          schemas: await this.getSchemasForDatabase(connection, credentials.password, datname)
-        }))
-      );
+        const discovered = await Promise.allSettled(
+          result.rows.map(async ({ datname }) => ({
+            name: datname,
+            schemas: await this.getSchemasForDatabase(
+              connection,
+              credentials.password,
+              datname,
+            ),
+          })),
+        );
 
-      return discovered
-        .filter((entry): entry is PromiseFulfilledResult<DiscoveredDatabase> => entry.status === 'fulfilled')
-        .map((entry) => entry.value);
-    }, connection.database || 'postgres');
+        return discovered
+          .filter(
+            (entry): entry is PromiseFulfilledResult<DiscoveredDatabase> =>
+              entry.status === "fulfilled",
+          )
+          .map((entry) => entry.value);
+      },
+      connection.database || "postgres",
+    );
   }
 
-  public async getSchemas(connection: SavedConnection, credentials: ConnectionCredentials): Promise<string[]> {
-    return this.getSchemasForDatabase(connection, credentials.password, connection.database);
+  public async getSchemas(
+    connection: SavedConnection,
+    credentials: ConnectionCredentials,
+  ): Promise<string[]> {
+    return this.getSchemasForDatabase(
+      connection,
+      credentials.password,
+      connection.database,
+    );
   }
 
-  public async getRoles(connection: SavedConnection, credentials: ConnectionCredentials): Promise<DatabaseRole[]> {
+  public async getRoles(
+    connection: SavedConnection,
+    credentials: ConnectionCredentials,
+  ): Promise<DatabaseRole[]> {
     return this.withClient(connection, credentials.password, async (client) => {
       const result = await client.query<RoleRow>(`
         select
@@ -95,12 +123,15 @@ export class PostgresAdapter implements DatabaseAdapter {
 
       return result.rows.map(({ rolname, role_type }) => ({
         name: rolname,
-        type: role_type
+        type: role_type,
       }));
     });
   }
 
-  public async getTypes(connection: SavedConnection, credentials: ConnectionCredentials): Promise<DatabaseTypeDefinition[]> {
+  public async getTypes(
+    connection: SavedConnection,
+    credentials: ConnectionCredentials,
+  ): Promise<DatabaseTypeDefinition[]> {
     return this.withClient(connection, credentials.password, async (client) => {
       const result = await client.query<TypeRow>(`
         select
@@ -116,47 +147,65 @@ export class PostgresAdapter implements DatabaseAdapter {
 
       return result.rows.map(({ schema_name, type_name }) => ({
         schema: schema_name,
-        name: type_name
+        name: type_name,
       }));
     });
   }
 
-  public async getTables(connection: SavedConnection, credentials: ConnectionCredentials, schema: string): Promise<SchemaTable[]> {
+  public async getTables(
+    connection: SavedConnection,
+    credentials: ConnectionCredentials,
+    schema: string,
+  ): Promise<SchemaTable[]> {
     return this.withClient(connection, credentials.password, async (client) => {
-      const result = await client.query<TableRow>(`
+      const result = await client.query<TableRow>(
+        `
         select table_name, table_type
         from information_schema.tables
         where table_schema = $1
         order by table_name
-      `, [schema]);
+      `,
+        [schema],
+      );
 
       return result.rows.map(({ table_name, table_type }) => ({
         schema,
         name: table_name,
-        type: table_type
+        type: table_type,
       }));
     });
   }
 
-  public async getColumns(connection: SavedConnection, credentials: ConnectionCredentials, table: { schema: string; table: string }): Promise<DatabaseColumn[]> {
+  public async getColumns(
+    connection: SavedConnection,
+    credentials: ConnectionCredentials,
+    table: { schema: string; table: string },
+  ): Promise<DatabaseColumn[]> {
     return this.withClient(connection, credentials.password, async (client) => {
-      const result = await client.query<ColumnRow>(`
+      const result = await client.query<ColumnRow>(
+        `
         select column_name, data_type, is_nullable
         from information_schema.columns
         where table_schema = $1
           and table_name = $2
         order by ordinal_position
-      `, [table.schema, table.table]);
+      `,
+        [table.schema, table.table],
+      );
 
       return result.rows.map(({ column_name, data_type, is_nullable }) => ({
         name: column_name,
         dataType: data_type,
-        isNullable: is_nullable === 'YES'
+        isNullable: is_nullable === "YES",
       }));
     });
   }
 
-  public async executeQuery(connection: SavedConnection, credentials: ConnectionCredentials, sql: string): Promise<QueryExecutionResult> {
+  public async executeQuery(
+    connection: SavedConnection,
+    credentials: ConnectionCredentials,
+    sql: string,
+  ): Promise<QueryExecutionResult> {
     return this.withClient(connection, credentials.password, async (client) => {
       const startedAt = Date.now();
       const result = await client.query<PostgresRow>(sql);
@@ -166,14 +215,21 @@ export class PostgresAdapter implements DatabaseAdapter {
         rows: result.rows,
         rowCount: result.rowCount ?? result.rows.length,
         durationMs: Date.now() - startedAt,
-        message: `Query completed against ${connection.database}.`
+        message: `Query completed against ${connection.database}.`,
       };
     });
   }
 
-  private async getSchemasForDatabase(connection: SavedConnection, password: string, database?: string): Promise<string[]> {
-    return this.withClient(connection, password, async (client) => {
-      const result = await client.query<SchemaNameRow>(`
+  private async getSchemasForDatabase(
+    connection: SavedConnection,
+    password: string,
+    database?: string,
+  ): Promise<string[]> {
+    return this.withClient(
+      connection,
+      password,
+      async (client) => {
+        const result = await client.query<SchemaNameRow>(`
         select schema_name
         from information_schema.schemata
         where schema_name not like 'pg_%'
@@ -181,17 +237,21 @@ export class PostgresAdapter implements DatabaseAdapter {
         order by schema_name
       `);
 
-      return result.rows.map(({ schema_name }) => schema_name);
-    }, database);
+        return result.rows.map(({ schema_name }) => schema_name);
+      },
+      database,
+    );
   }
 
   private async withClient<T>(
     connection: SavedConnection,
     password: string,
     action: (client: Client) => Promise<T>,
-    databaseOverride?: string
+    databaseOverride?: string,
   ): Promise<T> {
-    const client = new Client(this.createConfig(connection, password, databaseOverride));
+    const client = new Client(
+      this.createConfig(connection, password, databaseOverride),
+    );
     await client.connect();
 
     try {
@@ -201,14 +261,21 @@ export class PostgresAdapter implements DatabaseAdapter {
     }
   }
 
-  private createConfig(connection: SavedConnection, password: string, databaseOverride?: string): ClientConfig {
+  private createConfig(
+    connection: SavedConnection,
+    password: string,
+    databaseOverride?: string,
+  ): ClientConfig {
     return {
       host: connection.host,
       port: connection.port,
-      database: databaseOverride || connection.database || 'postgres',
+      database: databaseOverride || connection.database || "postgres",
       user: connection.username,
       password,
-      ssl: connection.sslMode === 'require' ? { rejectUnauthorized: false } : undefined
+      ssl:
+        connection.sslMode === "require"
+          ? { rejectUnauthorized: false }
+          : undefined,
     };
   }
 }

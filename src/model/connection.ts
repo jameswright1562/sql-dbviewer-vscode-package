@@ -1,10 +1,10 @@
 import { OrderByDirection } from "kysely";
 
-export type DatabaseEngine = 'postgres' | 'mysql' | 'sqlserver';
+export type DatabaseEngine = "postgres" | "mysql" | "sqlserver";
 
-export type AuthMode = 'storedPassword' | 'awsSecret';
+export type AuthMode = "storedPassword" | "awsSecret";
 
-export type SslMode = 'disable' | 'require';
+export type SslMode = "disable" | "require";
 
 export interface AwsSecretConfig {
   secretId: string;
@@ -28,7 +28,10 @@ export interface SavedConnection {
   updatedAt: string;
 }
 
-export interface ConnectionDraft extends Omit<SavedConnection, 'id' | 'updatedAt'> {
+export interface ConnectionDraft extends Omit<
+  SavedConnection,
+  "id" | "updatedAt"
+> {
   id?: string;
   password?: string;
 }
@@ -61,21 +64,21 @@ export interface DatabaseColumn {
   name: string;
   dataType: string;
   isNullable: boolean;
-  sort?: TableSortDefinition
+  sort?: TableSortDefinition;
 }
 
 export type TableFilterOperator =
-  | 'equals'
-  | 'notEquals'
-  | 'contains'
-  | 'startsWith'
-  | 'endsWith'
-  | 'greaterThan'
-  | 'greaterThanOrEqual'
-  | 'lessThan'
-  | 'lessThanOrEqual'
-  | 'isNull'
-  | 'isNotNull';
+  | "equals"
+  | "notEquals"
+  | "contains"
+  | "startsWith"
+  | "endsWith"
+  | "greaterThan"
+  | "greaterThanOrEqual"
+  | "lessThan"
+  | "lessThanOrEqual"
+  | "isNull"
+  | "isNotNull";
 
 export interface TableFilterDefinition {
   columnName: string;
@@ -99,32 +102,32 @@ export interface DatabaseTypeDefinition {
 }
 
 export interface ExplorerConnectionNode {
-  kind: 'connection';
+  kind: "connection";
   connection: SavedConnection;
 }
 
 export interface ExplorerSchemaNode {
-  kind: 'schema';
+  kind: "schema";
   connection: SavedConnection;
   database: string;
   schema: string;
 }
 
 export interface ExplorerDatabaseNode {
-  kind: 'database';
+  kind: "database";
   connection: SavedConnection;
   database: string;
 }
 
 export interface ExplorerCategoryNode {
-  kind: 'category';
+  kind: "category";
   connection: SavedConnection;
   database: string;
-  category: 'schemas' | 'roles' | 'types';
+  category: "schemas" | "roles" | "types";
 }
 
 export interface ExplorerTableNode {
-  kind: 'table';
+  kind: "table";
   connection: SavedConnection;
   database: string;
   schema: string;
@@ -133,7 +136,7 @@ export interface ExplorerTableNode {
 }
 
 export interface ExplorerColumnNode {
-  kind: 'column';
+  kind: "column";
   connection: SavedConnection;
   database: string;
   schema: string;
@@ -142,14 +145,14 @@ export interface ExplorerColumnNode {
 }
 
 export interface ExplorerRoleNode {
-  kind: 'role';
+  kind: "role";
   connection: SavedConnection;
   database: string;
   role: DatabaseRole;
 }
 
 export interface ExplorerTypeNode {
-  kind: 'type';
+  kind: "type";
   connection: SavedConnection;
   database: string;
   typeDefinition: DatabaseTypeDefinition;

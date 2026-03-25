@@ -1,29 +1,33 @@
-import { DatabaseEngine, TableFilterDefinition, TableSortDefinition } from '../model/connection';
-import { TableReference } from './types';
+import {
+  DatabaseEngine,
+  TableFilterDefinition,
+  TableSortDefinition,
+} from "../model/connection";
+import { TableReference } from "./types";
 
 export const TABLE_PREVIEW_LIMIT = 100;
 
 export function getDefaultQuery(engine: DatabaseEngine): string {
   switch (engine) {
-    case 'mysql':
-      return 'SELECT NOW() AS current_timestamp;';
-    case 'sqlserver':
-      return 'SELECT SYSDATETIME() AS current_timestamp;';
+    case "mysql":
+      return "SELECT NOW() AS current_timestamp;";
+    case "sqlserver":
+      return "SELECT SYSDATETIME() AS current_timestamp;";
     default:
-      return 'SELECT CURRENT_TIMESTAMP;';
+      return "SELECT CURRENT_TIMESTAMP;";
   }
 }
 
 export function buildPreviewTableSql(
   engine: DatabaseEngine,
   table: TableReference,
-  limit = TABLE_PREVIEW_LIMIT
+  limit = TABLE_PREVIEW_LIMIT,
 ): string {
   if (!Number.isInteger(limit) || limit <= 0) {
-    throw new Error('Preview row limit must be a positive integer.');
+    throw new Error("Preview row limit must be a positive integer.");
   }
 
-  if (engine === 'sqlserver') {
+  if (engine === "sqlserver") {
     return `SELECT TOP (${limit}) *\nFROM ${formatQualifiedTableName(engine, table)};`;
   }
 
@@ -34,8 +38,8 @@ export function buildSortedAndFilteredTableSql(
   engine: DatabaseEngine,
   table: TableReference,
   filters: TableFilterDefinition[],
-    sortFilter?: TableSortDefinition,
-  limit = TABLE_PREVIEW_LIMIT
+  sortFilter?: TableSortDefinition,
+  limit = TABLE_PREVIEW_LIMIT,
 ): string {
   const normalizedFilters = filters.filter((filter) => {
     if (!filter.columnName.trim()) {
@@ -55,9 +59,10 @@ export function buildSortedAndFilteredTableSql(
         .map((filter) => buildFilterClause(engine, filter))
         .join("\n  AND ")}`
     : "";
-  const orderByClause = sortFilter && sortFilter.direction
-    ? `\nORDER BY ${sortFilter.columnName} ${sortFilter.direction.toUpperCase()}`
-    : "";
+  const orderByClause =
+    sortFilter && sortFilter.direction
+      ? `\nORDER BY ${sortFilter.columnName} ${sortFilter.direction.toUpperCase()}`
+      : "";
 
   if (engine === "sqlserver") {
     return `SELECT TOP (${limit}) *\nFROM ${qualifiedTableName}${whereClause}${orderByClause};`;
@@ -66,48 +71,54 @@ export function buildSortedAndFilteredTableSql(
   return `SELECT *\nFROM ${qualifiedTableName}${whereClause}${orderByClause}\nLIMIT ${limit};`;
 }
 
-function formatQualifiedTableName(engine: DatabaseEngine, table: TableReference): string {
+function formatQualifiedTableName(
+  engine: DatabaseEngine,
+  table: TableReference,
+): string {
   return `${quoteIdentifier(engine, table.schema)}.${quoteIdentifier(engine, table.table)}`;
 }
 
 function quoteIdentifier(engine: DatabaseEngine, value: string): string {
-  if (engine === 'mysql') {
-    return `\`${value.replaceAll('`', '``')}\``;
+  if (engine === "mysql") {
+    return `\`${value.replaceAll("`", "``")}\``;
   }
 
-  if (engine === 'sqlserver') {
-    return `[${value.replaceAll(']', ']]')}]`;
+  if (engine === "sqlserver") {
+    return `[${value.replaceAll("]", "]]")}]`;
   }
 
   return `"${value.replaceAll('"', '""')}"`;
 }
 
-function buildFilterClause(engine: DatabaseEngine, filter: TableFilterDefinition): string {
+function buildFilterClause(
+  engine: DatabaseEngine,
+  filter: TableFilterDefinition,
+): string {
   const column = quoteIdentifier(engine, filter.columnName.trim());
-  const value = filter.value?.trim() ?? '';
+  const value = filter.value?.trim() ?? "";
 
   switch (filter.operator) {
-    case 'equals':
+    case "equals":
       return `${column} = ${formatLiteral(value)}`;
-    case 'notEquals':
+    case "notEquals":
       return `${column} <> ${formatLiteral(value)}`;
-    case 'contains':
+    case "contains":
       return `${column} LIKE ${formatLiteral(`%${escapeLike(value)}%`)}`;
-    case 'startsWith':
+    case "startsWith":
       return `${column} LIKE ${formatLiteral(`${escapeLike(value)}%`)}`;
-    case 'endsWith':
+    case "endsWith":
       return `${column} LIKE ${formatLiteral(`%${escapeLike(value)}`)}`;
-    case 'greaterThan':
+    case "greaterThan":
       return `${column} > ${formatLiteral(value)}`;
-    case 'greaterThanOrEqual':
+    case "greaterThanOrEqual":
       return `${column} >= ${formatLiteral(value)}`;
-    case 'lessThan':
+    case "lessThan":
       return `${column} < ${formatLiteral(value)}`;
-    case 'lessThanOrEqual':
+    case "lessThanOrEqual":
       return `${column} <= ${formatLiteral(value)}`;
-    case 'isNull':
+    case "isNull":
       return `${column} IS NULL`;
-    case 'isNotNull':
+    case "isNotNull":
       return `${column} IS NOT NULL`;
   }
 }
@@ -125,5 +136,5 @@ function formatLiteral(value: string): string {
 }
 
 function escapeLike(value: string): string {
-  return value.replaceAll('%', '\\%').replaceAll('_', '\\_');
+  return value.replaceAll("%", "\\%").replaceAll("_", "\\_");
 }

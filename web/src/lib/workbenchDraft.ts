@@ -1,44 +1,52 @@
-import { ConnectionDraft, DatabaseEngine, WorkbenchConnection } from './protocol';
+import {
+  ConnectionDraft,
+  DatabaseEngine,
+  WorkbenchConnection,
+} from "./protocol";
 
 export const defaultPorts: Record<DatabaseEngine, number> = {
   postgres: 5432,
   mysql: 3306,
-  sqlserver: 1433
+  sqlserver: 1433,
 };
 
 export function getDefaultQuery(engine: DatabaseEngine): string {
   switch (engine) {
-    case 'mysql':
-      return 'SELECT NOW() AS current_timestamp;';
-    case 'sqlserver':
-      return 'SELECT SYSDATETIME() AS current_timestamp;';
+    case "mysql":
+      return "SELECT NOW() AS current_timestamp;";
+    case "sqlserver":
+      return "SELECT SYSDATETIME() AS current_timestamp;";
     default:
-      return 'SELECT CURRENT_TIMESTAMP;';
+      return "SELECT CURRENT_TIMESTAMP;";
   }
 }
 
-export function createEmptyDraft(engine: DatabaseEngine = 'postgres'): ConnectionDraft {
+export function createEmptyDraft(
+  engine: DatabaseEngine = "postgres",
+): ConnectionDraft {
   return {
     engine,
-    name: '',
-    host: '',
+    name: "",
+    host: "",
     port: defaultPorts[engine],
-    database: '',
-    username: '',
-    sslMode: 'disable',
-    authMode: 'storedPassword',
+    database: "",
+    username: "",
+    sslMode: "disable",
+    authMode: "storedPassword",
     visibleSchemas: [],
     awsSecret: {
-      secretId: '',
-      profile: '',
-      passwordKey: 'password',
-      region: ''
+      secretId: "",
+      profile: "",
+      passwordKey: "password",
+      region: "",
     },
-    password: ''
+    password: "",
   };
 }
 
-export function cloneConnectionToDraft(connection: WorkbenchConnection): ConnectionDraft {
+export function cloneConnectionToDraft(
+  connection: WorkbenchConnection,
+): ConnectionDraft {
   return {
     id: connection.id,
     engine: connection.engine,
@@ -51,22 +59,22 @@ export function cloneConnectionToDraft(connection: WorkbenchConnection): Connect
     authMode: connection.authMode,
     visibleSchemas: [...connection.visibleSchemas],
     awsSecret: {
-      secretId: connection.awsSecret?.secretId ?? '',
-      profile: connection.awsSecret?.profile ?? '',
-      passwordKey: connection.awsSecret?.passwordKey ?? 'password',
-      region: connection.awsSecret?.region ?? ''
+      secretId: connection.awsSecret?.secretId ?? "",
+      profile: connection.awsSecret?.profile ?? "",
+      passwordKey: connection.awsSecret?.passwordKey ?? "password",
+      region: connection.awsSecret?.region ?? "",
     },
-    password: ''
+    password: "",
   };
 }
 
 export function getEngineLabel(engine: DatabaseEngine): string {
   switch (engine) {
-    case 'postgres':
-      return 'PostgreSQL';
-    case 'mysql':
-      return 'MySQL';
-    case 'sqlserver':
-      return 'SQL Server';
+    case "postgres":
+      return "PostgreSQL";
+    case "mysql":
+      return "MySQL";
+    case "sqlserver":
+      return "SQL Server";
   }
 }

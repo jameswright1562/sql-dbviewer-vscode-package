@@ -3,9 +3,7 @@
     "module": "commonjs",
     "target": "ES2022",
     "outDir": "out",
-    "lib": [
-      "ES2022"
-    ],
+    "lib": ["ES2022"],
     "sourceMap": true,
     "rootDir": "src",
     "strict": true,
@@ -13,17 +11,9 @@
     "moduleResolution": "node",
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": [
-      "node",
-      "vscode"
-    ],
+    "types": ["node", "vscode"],
     "ignoreDeprecations": "6.0"
   },
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    ".vscode-test"
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", ".vscode-test"]
 }

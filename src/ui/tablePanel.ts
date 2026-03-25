@@ -1,12 +1,23 @@
-import * as vscode from 'vscode';
-import { buildSortedAndFilteredTableSql, buildPreviewTableSql } from '../db/databaseAdapters';
-import { ExplorerTableNode, TableFilterDefinition, TableSortDefinition } from '../model/connection';
-import { DatabaseService } from '../services/databaseService';
-import { ErrorReporter } from '../services/errorReporter';
-import { ConnectionStore } from '../storage/connectionStore';
-import { ExtensionToWebviewMessage, TableViewMessage, TableViewState } from '../types';
-import { getReactWebviewHtml } from './webview/reactWebviewHtml';
-import { getPanelIconPath } from './webview/panelIcon';
+import * as vscode from "vscode";
+import {
+  buildSortedAndFilteredTableSql,
+  buildPreviewTableSql,
+} from "../db/databaseAdapters";
+import {
+  ExplorerTableNode,
+  TableFilterDefinition,
+  TableSortDefinition,
+} from "../model/connection";
+import { DatabaseService } from "../services/databaseService";
+import { ErrorReporter } from "../services/errorReporter";
+import { ConnectionStore } from "../storage/connectionStore";
+import {
+  ExtensionToWebviewMessage,
+  TableViewMessage,
+  TableViewState,
+} from "../types";
+import { getReactWebviewHtml } from "./webview/reactWebviewHtml";
+import { getPanelIconPath } from "./webview/panelIcon";
 
 export class TablePanel implements vscode.Disposable {
   private panel?: vscode.WebviewPanel;
@@ -21,19 +32,20 @@ export class TablePanel implements vscode.Disposable {
     private readonly context: vscode.ExtensionContext,
     private readonly connectionStore: ConnectionStore,
     private readonly databaseService: DatabaseService,
-    private readonly errorReporter: ErrorReporter
+    private readonly errorReporter: ErrorReporter,
   ) {}
 
   public async show(node: ExplorerTableNode): Promise<void> {
-    const hasChangedTable = this.currentNode?.connection.id !== node.connection.id
-      || this.currentNode?.schema !== node.schema
-      || this.currentNode?.table !== node.table;
+    const hasChangedTable =
+      this.currentNode?.connection.id !== node.connection.id ||
+      this.currentNode?.schema !== node.schema ||
+      this.currentNode?.table !== node.table;
     this.currentNode = node;
     if (hasChangedTable) {
       this.currentFilters = [];
       this.currentSql = buildPreviewTableSql(node.connection.engine, {
         schema: node.schema,
-        table: node.table
+        table: node.table,
       });
     }
     const panel = this.ensurePanel();
@@ -47,16 +59,21 @@ export class TablePanel implements vscode.Disposable {
       return;
     }
 
-    const connection = this.connectionStore.getConnection(this.currentNode.connection.id);
+    const connection = this.connectionStore.getConnection(
+      this.currentNode.connection.id,
+    );
     if (!connection) {
-      await this.postNotification('error', 'The connection for this table preview was removed.');
+      await this.postNotification(
+        "error",
+        "The connection for this table preview was removed.",
+      );
       this.dispose();
       return;
     }
 
     this.currentNode = {
       ...this.currentNode,
-      connection
+      connection,
     };
 
     await this.refresh();
@@ -74,21 +91,40 @@ export class TablePanel implements vscode.Disposable {
       return this.panel;
     }
 
-    const panel = vscode.window.createWebviewPanel('sqlConnectionWorkbench.tablePreview', 'Table Preview', vscode.ViewColumn.Two, {
-      enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'web', 'dist')]
-    });
+    const panel = vscode.window.createWebviewPanel(
+      "sqlConnectionWorkbench.tablePreview",
+      "Table Preview",
+      vscode.ViewColumn.Two,
+      {
+        enableScripts: true,
+        localResourceRoots: [
+          vscode.Uri.joinPath(this.context.extensionUri, "web", "dist"),
+        ],
+      },
+    );
 
     panel.iconPath = getPanelIconPath(this.context.extensionUri);
-    panel.webview.html = getReactWebviewHtml(this.context.extensionUri, panel.webview, 'table');
-    panel.webview.onDidReceiveMessage((message: TableViewMessage) => {
-      void this.handleMessage(message);
-    }, undefined, this.disposables);
-    panel.onDidDispose(() => {
-      this.panel = undefined;
-      this.currentNode = undefined;
-      this.currentState = undefined;
-    }, undefined, this.disposables);
+    panel.webview.html = getReactWebviewHtml(
+      this.context.extensionUri,
+      panel.webview,
+      "table",
+    );
+    panel.webview.onDidReceiveMessage(
+      (message: TableViewMessage) => {
+        void this.handleMessage(message);
+      },
+      undefined,
+      this.disposables,
+    );
+    panel.onDidDispose(
+      () => {
+        this.panel = undefined;
+        this.currentNode = undefined;
+        this.currentState = undefined;
+      },
+      undefined,
+      this.disposables,
+    );
 
     this.panel = panel;
     return panel;
@@ -101,42 +137,45 @@ export class TablePanel implements vscode.Disposable {
 
     try {
       switch (message.type) {
-        case 'ready':
+        case "ready":
           await this.postState();
           break;
-        case 'refresh':
+        case "refresh":
           await this.refresh();
           break;
-        case 'runQuery':
+        case "runQuery":
           await this.runCustomQuery(message.sql);
           break;
-        case 'applyFilters':
+        case "applyFilters":
           await this.applyFilters(message.filters);
           break;
-        case 'applySort':
+        case "applySort":
           await this.applySort({
             columnName: message.columnName,
-            direction: message.direction
+            direction: message.direction,
           });
           break;
-        case 'resetSql':
+        case "resetSql":
           await this.resetSql();
           break;
-        case 'openWorkbench':
-          await vscode.commands.executeCommand('sqlConnectionWorkbench.openWorkbench', message.connectionId);
+        case "openWorkbench":
+          await vscode.commands.executeCommand(
+            "sqlConnectionWorkbench.openWorkbench",
+            message.connectionId,
+          );
           break;
       }
     } catch (error) {
       const normalized = this.errorReporter.error(error, {
-        operation: 'tablePanel.handleMessage',
+        operation: "tablePanel.handleMessage",
         details: {
           messageType: message.type,
           connectionId: this.currentNode.connection.id,
-          table: this.currentNode.table
-        }
+          table: this.currentNode.table,
+        },
       });
 
-      await this.postNotification('error', normalized.message);
+      await this.postNotification("error", normalized.message);
     }
   }
 
@@ -146,22 +185,27 @@ export class TablePanel implements vscode.Disposable {
     }
 
     const { connection, schema, table } = this.currentNode;
-    const previewSql = buildPreviewTableSql(connection.engine, { schema, table });
+    const previewSql = buildPreviewTableSql(connection.engine, {
+      schema,
+      table,
+    });
     const currentSql = this.currentSql ?? previewSql;
 
     try {
       const [columns, result] = await Promise.all([
         this.databaseService.getColumns(connection, { schema, table }),
-        this.databaseService.executeQuery(connection, currentSql)
-        .then(x => {
-          return {...x, columns: x.columns.map(x=> {
-          if(x.name != this.currentSort?.columnName) return x;
+        this.databaseService.executeQuery(connection, currentSql).then((x) => {
           return {
             ...x,
-            sort: this.currentSort?.direction
-          }
-        })}
-      })
+            columns: x.columns.map((x) => {
+              if (x.name != this.currentSort?.columnName) return x;
+              return {
+                ...x,
+                sort: this.currentSort?.direction,
+              };
+            }),
+          };
+        }),
       ]);
 
       this.currentSql = currentSql;
@@ -176,17 +220,17 @@ export class TablePanel implements vscode.Disposable {
         currentSql,
         columns,
         filters: [...this.currentFilters],
-        result
+        result,
       };
     } catch (error) {
       const normalized = this.errorReporter.error(error, {
-        operation: 'tablePanel.refresh',
+        operation: "tablePanel.refresh",
         details: {
           connectionId: connection.id,
           connectionName: connection.name,
           schema,
-          table
-        }
+          table,
+        },
       });
 
       this.currentState = {
@@ -200,7 +244,7 @@ export class TablePanel implements vscode.Disposable {
         currentSql,
         columns: this.currentState?.columns ?? [],
         filters: [...this.currentFilters],
-        errorMessage: normalized.message
+        errorMessage: normalized.message,
       };
     }
 
@@ -210,7 +254,7 @@ export class TablePanel implements vscode.Disposable {
   private async runCustomQuery(sql: string): Promise<void> {
     const trimmedSql = sql.trim();
     if (!trimmedSql) {
-      throw new Error('Enter a SQL query before running it.');
+      throw new Error("Enter a SQL query before running it.");
     }
 
     this.currentSql = sql;
@@ -227,7 +271,7 @@ export class TablePanel implements vscode.Disposable {
       this.currentNode.connection.engine,
       {
         schema: this.currentNode.schema,
-        table: this.currentNode.table
+        table: this.currentNode.table,
       },
       filters,
       this.currentSort,
@@ -235,7 +279,7 @@ export class TablePanel implements vscode.Disposable {
     await this.refresh();
   }
 
-    private async applySort(sort: TableSortDefinition): Promise<void> {
+  private async applySort(sort: TableSortDefinition): Promise<void> {
     if (!this.currentNode) {
       return;
     }
@@ -245,10 +289,10 @@ export class TablePanel implements vscode.Disposable {
       this.currentNode.connection.engine,
       {
         schema: this.currentNode.schema,
-        table: this.currentNode.table
+        table: this.currentNode.table,
       },
       this.currentFilters,
-      this.currentSort
+      this.currentSort,
     );
     await this.refresh();
   }
@@ -261,7 +305,7 @@ export class TablePanel implements vscode.Disposable {
     this.currentFilters = [];
     this.currentSql = buildPreviewTableSql(this.currentNode.connection.engine, {
       schema: this.currentNode.schema,
-      table: this.currentNode.table
+      table: this.currentNode.table,
     });
     await this.refresh();
   }
@@ -272,28 +316,34 @@ export class TablePanel implements vscode.Disposable {
     }
 
     const delivered = await this.panel.webview.postMessage({
-      type: 'tableState',
-      state: this.currentState
+      type: "tableState",
+      state: this.currentState,
     } satisfies ExtensionToWebviewMessage);
 
     if (!delivered) {
-      this.errorReporter.warn('Table preview state message was not delivered.', {
-        connectionId: this.currentState.connectionId,
-        table: `${this.currentState.schema}.${this.currentState.table}`
-      });
+      this.errorReporter.warn(
+        "Table preview state message was not delivered.",
+        {
+          connectionId: this.currentState.connectionId,
+          table: `${this.currentState.schema}.${this.currentState.table}`,
+        },
+      );
     }
   }
 
-  private async postNotification(level: 'info' | 'error', message: string): Promise<void> {
+  private async postNotification(
+    level: "info" | "error",
+    message: string,
+  ): Promise<void> {
     if (this.panel) {
       await this.panel.webview.postMessage({
-        type: 'notification',
+        type: "notification",
         level,
-        message
+        message,
       } satisfies ExtensionToWebviewMessage);
     }
 
-    if (level === 'error') {
+    if (level === "error") {
       void vscode.window.showErrorMessage(message);
     }
   }

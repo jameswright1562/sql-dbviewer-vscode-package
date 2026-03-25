@@ -1,15 +1,15 @@
-import { SidebarApp } from './features/sidebar/SidebarApp';
-import { TableViewApp } from './features/table/TableViewApp';
-import { WorkbenchApp } from './features/workbench/WorkbenchApp';
-import { getWebviewKind } from './lib/vscode';
+import { SidebarApp } from "./features/sidebar/SidebarApp";
+import { TableViewApp } from "./features/table/TableViewApp";
+import { WorkbenchApp } from "./features/workbench/WorkbenchApp";
+import { getWebviewKind } from "./lib/vscode";
 
 export default function App() {
   const view = getWebviewKind();
 
   switch (view) {
-    case 'sidebar':
+    case "sidebar":
       return <SidebarApp />;
-    case 'table':
+    case "table":
       return <TableViewApp />;
     default:
       return <WorkbenchApp />;

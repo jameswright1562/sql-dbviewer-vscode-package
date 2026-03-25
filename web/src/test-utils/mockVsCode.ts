@@ -1,6 +1,6 @@
-import { IncomingMessage } from '../lib/protocol';
-import { VsCodeApi } from '../lib/vscode';
-import { act } from '@testing-library/react';
+import { IncomingMessage } from "../lib/protocol";
+import { VsCodeApi } from "../lib/vscode";
+import { act } from "@testing-library/react";
 
 export interface MockVsCodeApi<State> extends VsCodeApi<State> {
   postMessage: jest.Mock<void, [unknown]>;
@@ -8,19 +8,22 @@ export interface MockVsCodeApi<State> extends VsCodeApi<State> {
   setState: jest.Mock<void, [State]>;
 }
 
-export function installMockVsCodeApi<State>(initialState?: State): MockVsCodeApi<State> {
+export function installMockVsCodeApi<State>(
+  initialState?: State,
+): MockVsCodeApi<State> {
   const api: MockVsCodeApi<State> = {
     postMessage: jest.fn<void, [unknown]>(),
     getState: jest.fn<State | undefined, []>(() => initialState),
-    setState: jest.fn<void, [State]>()
+    setState: jest.fn<void, [State]>(),
   };
 
-  window.acquireVsCodeApi = <ApiState = unknown>() => api as unknown as VsCodeApi<ApiState>;
+  window.acquireVsCodeApi = <ApiState = unknown>() =>
+    api as unknown as VsCodeApi<ApiState>;
   return api;
 }
 
 export function dispatchIncomingMessage(message: IncomingMessage): void {
   act(() => {
-    window.dispatchEvent(new MessageEvent('message', { data: message }));
+    window.dispatchEvent(new MessageEvent("message", { data: message }));
   });
 }

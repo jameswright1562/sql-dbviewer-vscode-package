@@ -1,4 +1,4 @@
-import { WebviewKind } from './protocol';
+import { WebviewKind } from "./protocol";
 
 export interface VsCodeApi<State> {
   postMessage(message: unknown): void;
@@ -19,11 +19,11 @@ const fallbackApi: VsCodeApi<unknown> = {
   getState: () => fallbackState,
   setState: (state) => {
     fallbackState = state;
-  }
+  },
 };
 
 export function getVsCodeApi<State>(): VsCodeApi<State> {
-  if (typeof window === 'undefined' || !window.acquireVsCodeApi) {
+  if (typeof window === "undefined" || !window.acquireVsCodeApi) {
     return fallbackApi as VsCodeApi<State>;
   }
 
@@ -31,10 +31,10 @@ export function getVsCodeApi<State>(): VsCodeApi<State> {
 }
 
 export function getWebviewKind(): WebviewKind {
-  if (typeof document === 'undefined') {
-    return 'workbench';
+  if (typeof document === "undefined") {
+    return "workbench";
   }
 
   const view = document.body.dataset.view;
-  return view === 'sidebar' || view === 'table' ? view : 'workbench';
+  return view === "sidebar" || view === "table" ? view : "workbench";
 }

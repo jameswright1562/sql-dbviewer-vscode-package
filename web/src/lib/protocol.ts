@@ -1,6 +1,6 @@
-export type DatabaseEngine = 'postgres' | 'mysql' | 'sqlserver';
-export type AuthMode = 'storedPassword' | 'awsSecret';
-export type SslMode = 'disable' | 'require';
+export type DatabaseEngine = "postgres" | "mysql" | "sqlserver";
+export type AuthMode = "storedPassword" | "awsSecret";
+export type SslMode = "disable" | "require";
 
 export interface AwsSecretConfig {
   secretId: string;
@@ -25,13 +25,16 @@ export interface WorkbenchConnection {
   hasStoredPassword: boolean;
 }
 
-export interface ConnectionDraft extends Omit<WorkbenchConnection, 'id' | 'updatedAt' | 'hasStoredPassword'> {
+export interface ConnectionDraft extends Omit<
+  WorkbenchConnection,
+  "id" | "updatedAt" | "hasStoredPassword"
+> {
   id?: string;
   password?: string;
 }
 
 export interface QueryExecutionResult {
-  columns: Array<{ name: string, sort?: Order }>;
+  columns: Array<{ name: string; sort?: Order }>;
   rows: Array<Record<string, unknown>>;
   rowCount: number;
   durationMs: number;
@@ -39,17 +42,17 @@ export interface QueryExecutionResult {
 }
 
 export type TableFilterOperator =
-  | 'equals'
-  | 'notEquals'
-  | 'contains'
-  | 'startsWith'
-  | 'endsWith'
-  | 'greaterThan'
-  | 'greaterThanOrEqual'
-  | 'lessThan'
-  | 'lessThanOrEqual'
-  | 'isNull'
-  | 'isNotNull';
+  | "equals"
+  | "notEquals"
+  | "contains"
+  | "startsWith"
+  | "endsWith"
+  | "greaterThan"
+  | "greaterThanOrEqual"
+  | "lessThan"
+  | "lessThanOrEqual"
+  | "isNull"
+  | "isNotNull";
 
 export interface DatabaseColumn {
   name: string;
@@ -97,50 +100,50 @@ export interface TableViewState {
 }
 
 export type NotificationMessage = {
-  type: 'notification';
-  level: 'info' | 'error';
+  type: "notification";
+  level: "info" | "error";
   message: string;
 };
 
 export type IncomingMessage =
-  | { type: 'workbenchState'; state: WorkbenchState }
-  | { type: 'sidebarState'; state: SidebarState }
-  | { type: 'tableState'; state: TableViewState }
+  | { type: "workbenchState"; state: WorkbenchState }
+  | { type: "sidebarState"; state: SidebarState }
+  | { type: "tableState"; state: TableViewState }
   | NotificationMessage;
 
 export type WorkbenchOutgoingMessage =
-  | { type: 'ready' }
-  | { type: 'selectConnection'; connectionId?: string }
-  | { type: 'saveConnection'; draft: ConnectionDraft }
-  | { type: 'deleteConnection'; connectionId: string }
-  | { type: 'testConnection'; draft: ConnectionDraft }
-  | { type: 'discoverDatabases'; draft: ConnectionDraft }
-  | { type: 'runDraftQuery'; draft: ConnectionDraft; sql: string }
-  | { type: 'runQuery'; connectionId: string; sql: string }
-  | { type: 'chooseSchemas'; connectionId: string }
-  | { type: 'newConnection' };
+  | { type: "ready" }
+  | { type: "selectConnection"; connectionId?: string }
+  | { type: "saveConnection"; draft: ConnectionDraft }
+  | { type: "deleteConnection"; connectionId: string }
+  | { type: "testConnection"; draft: ConnectionDraft }
+  | { type: "discoverDatabases"; draft: ConnectionDraft }
+  | { type: "runDraftQuery"; draft: ConnectionDraft; sql: string }
+  | { type: "runQuery"; connectionId: string; sql: string }
+  | { type: "chooseSchemas"; connectionId: string }
+  | { type: "newConnection" };
 
 export type SidebarOutgoingMessage =
-  | { type: 'ready' }
-  | { type: 'addConnection' }
-  | { type: 'refresh' }
-  | { type: 'openWorkbench'; connectionId?: string };
+  | { type: "ready" }
+  | { type: "addConnection" }
+  | { type: "refresh" }
+  | { type: "openWorkbench"; connectionId?: string };
 
 export type TableOutgoingMessage =
-  | { type: 'ready' }
-  | { type: 'refresh' }
-  | { type: 'runQuery'; sql: string }
-  | { type: 'applyFilters'; filters: TableFilterDefinition[] }
-  | { type: 'resetSql' }
-  | { type: 'openWorkbench'; connectionId: string }
-  | { type: 'applySort'; direction?: Order; columnName: string; };
+  | { type: "ready" }
+  | { type: "refresh" }
+  | { type: "runQuery"; sql: string }
+  | { type: "applyFilters"; filters: TableFilterDefinition[] }
+  | { type: "resetSql" }
+  | { type: "openWorkbench"; connectionId: string }
+  | { type: "applySort"; direction?: Order; columnName: string };
 
 export enum Order {
-  Descending = "desc", 
-  Ascending = "asc"
+  Descending = "desc",
+  Ascending = "asc",
 }
 
-export type WebviewKind = 'workbench' | 'sidebar' | 'table';
+export type WebviewKind = "workbench" | "sidebar" | "table";
 
 export interface WorkbenchPersistenceState {
   draft: ConnectionDraft;
@@ -151,6 +154,6 @@ export interface WorkbenchPersistenceState {
 
 export interface NotificationItem {
   id: number;
-  level: 'info' | 'error';
+  level: "info" | "error";
   message: string;
 }

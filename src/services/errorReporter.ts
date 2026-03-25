@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
 export interface ErrorContext {
   operation: string;
@@ -6,16 +6,18 @@ export interface ErrorContext {
 }
 
 export class ErrorReporter implements vscode.Disposable {
-  private readonly outputChannel = vscode.window.createOutputChannel('SQL Connection Workbench');
+  private readonly outputChannel = vscode.window.createOutputChannel(
+    "SQL Connection Workbench",
+  );
 
   public constructor(private readonly isDebugging: boolean) {}
 
   public info(message: string, details?: Record<string, unknown>): void {
-    this.append('INFO', message, details);
+    this.append("INFO", message, details);
   }
 
   public warn(message: string, details?: Record<string, unknown>): void {
-    this.append('WARN', message, details);
+    this.append("WARN", message, details);
   }
 
   public error(error: unknown, context: ErrorContext): Error {
@@ -25,10 +27,14 @@ export class ErrorReporter implements vscode.Disposable {
       ...context.details,
       name: normalized.name,
       message: normalized.message,
-      stack: normalized.stack
+      stack: normalized.stack,
     };
 
-    this.append('ERROR', `Unhandled exception in ${context.operation}`, payload);
+    this.append(
+      "ERROR",
+      `Unhandled exception in ${context.operation}`,
+      payload,
+    );
     console.error(`[SQL Connection Workbench] ${context.operation}`, payload);
 
     if (this.isDebugging) {
@@ -38,7 +44,10 @@ export class ErrorReporter implements vscode.Disposable {
     return normalized;
   }
 
-  public async capture<T>(context: ErrorContext, action: () => Promise<T>): Promise<T> {
+  public async capture<T>(
+    context: ErrorContext,
+    action: () => Promise<T>,
+  ): Promise<T> {
     try {
       return await action();
     } catch (error) {
@@ -50,7 +59,11 @@ export class ErrorReporter implements vscode.Disposable {
     this.outputChannel.dispose();
   }
 
-  private append(level: 'INFO' | 'WARN' | 'ERROR', message: string, details?: Record<string, unknown>): void {
+  private append(
+    level: "INFO" | "WARN" | "ERROR",
+    message: string,
+    details?: Record<string, unknown>,
+  ): void {
     const timestamp = new Date().toISOString();
     this.outputChannel.appendLine(`[${timestamp}] [${level}] ${message}`);
 
@@ -73,9 +86,9 @@ export function normalizeError(error: unknown): Error {
     return error;
   }
 
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return new Error(error);
   }
 
-  return new Error('Unexpected error');
+  return new Error("Unexpected error");
 }

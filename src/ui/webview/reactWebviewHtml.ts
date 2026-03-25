@@ -1,20 +1,24 @@
-import * as path from 'path';
-import * as vscode from 'vscode';
+import * as path from "path";
+import * as vscode from "vscode";
 
-export type ReactWebviewView = 'workbench' | 'sidebar' | 'table';
+export type ReactWebviewView = "workbench" | "sidebar" | "table";
 
 export function getReactWebviewHtml(
   extensionUri: vscode.Uri,
   webview: vscode.Webview,
-  view: ReactWebviewView
+  view: ReactWebviewView,
 ): string {
-  const distRoot = vscode.Uri.joinPath(extensionUri, 'web', 'dist');
-  const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(distRoot, 'index.js'));
-  const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(distRoot, 'index.css'));
-  const distPath = path.join(extensionUri.fsPath, 'web', 'dist');
+  const distRoot = vscode.Uri.joinPath(extensionUri, "web", "dist");
+  const scriptUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(distRoot, "index.js"),
+  );
+  const styleUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(distRoot, "index.css"),
+  );
+  const distPath = path.join(extensionUri.fsPath, "web", "dist");
 
   if (!path.isAbsolute(distPath)) {
-    throw new Error('Unable to resolve webview bundle path.');
+    throw new Error("Unable to resolve webview bundle path.");
   }
 
   return `<!DOCTYPE html>
